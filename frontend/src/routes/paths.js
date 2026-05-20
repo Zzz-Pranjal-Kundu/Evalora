@@ -1,0 +1,20 @@
+/** Central path constants for react-router `<Route path>` and `<Link to>`. */
+export const ROUTES = {
+  HOME: "/",
+  LOGIN: "/login",
+  REGISTER: "/register",
+  PROFILE: "/profile",
+  REVIEWS: "/reviews",
+  FEEDBACK: "/feedback",
+  NOTIFICATIONS: "/notifications",
+  ANALYTICS: "/analytics",
+  SELF_ASSESSMENT: "/self-assessment",
+  ORG: "/org",
+  COMPETENCIES: "/competencies",
+  CALIBRATION: "/calibration",
+  DEVELOPMENT: "/development",
+  RECOGNITION: "/recognition",
+  HR: "/hr",
+  LEADERSHIP: "/leadership",
+  ADMIN: "/admin",
+};

@@ -1,0 +1,612 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String            @unique
+  label           String
+  createdAt       DateTime          @default(now()) @map("created_at")
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String            @unique
+  description     String?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String            @unique
+  passwordHash          String            @map("password_hash")
+  isActive              Boolean           @default(true) @map("is_active")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @default(now()) @map("updated_at")
+
+  userRoles             UserRole[]
+  refreshTokens         RefreshToken[]
+  employeeProfile       Employee?
+  goalUpdates           GoalUpdate[]
+  goalComments          GoalComment[]
+  goalApprovals         GoalApproval[]
+  feedbackSent          FeedbackEntry[]   @relation("FeedbackFromUser")
+  feedbackReceived      FeedbackEntry[]   @relation("FeedbackToUser")
+  feedbackRequestsSent  FeedbackRequest[] @relation("FeedbackReqFromUser")
+  feedbackRequestsRecv  FeedbackRequest[] @relation("FeedbackReqToUser")
+  checkinsAsManager     Checkin[]         @relation("CheckinManager")
+  checkinsAsEmployee    Checkin[]         @relation("CheckinEmployee")
+  checkinNotes          CheckinNote[]
+  reviewAssignments     ReviewAssignment[]
+  reviews               Review[]          @relation("ReviewerUser")
+  ratingRecords         RatingRecord[]
+  calibrationAdjustments CalibrationAdjustment[]
+  recognitionsSent      Recognition[]     @relation("RecognitionFromUser")
+  recognitionsReceived  Recognition[]     @relation("RecognitionToUser")
+  attachments           Attachment[]
+  notifications         Notification[]
+  auditLogs             AuditLog[]
+
+  @@map("users")
+}
+
+model UserRole {
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Department {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  parentId    String?      @map("parent_id") @db.Uuid
+  parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children    Department[] @relation("DepartmentHierarchy")
+  employees   Employee[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@map("departments")
+}
+
+model BusinessUnit {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  employees Employee[]
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("business_units")
+}
+
+model Location {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  employees Employee[]
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("locations")
+}
+
+model Employee {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String?      @unique @map("user_id") @db.Uuid
+  employeeNumber   String?      @unique @map("employee_number")
+  fullName         String       @map("full_name")
+  jobTitle         String?      @map("job_title")
+  grade            String?
+  departmentId     String?      @map("department_id") @db.Uuid
+  businessUnitId   String?      @map("business_unit_id") @db.Uuid
+  locationId       String?      @map("location_id") @db.Uuid
+  employmentStatus String       @default("ACTIVE") @map("employment_status")
+  hireDate         DateTime?    @map("hire_date") @db.Date
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @default(now()) @map("updated_at")
+
+  user                 User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  department           Department?            @relation(fields: [departmentId], references: [id])
+  businessUnit         BusinessUnit?          @relation(fields: [businessUnitId], references: [id])
+  location             Location?              @relation(fields: [locationId], references: [id])
+  managers             ReportingRelationship[] @relation("ManagerRel")
+  directReports        ReportingRelationship[] @relation("EmployeeRel")
+  goals                Goal[]
+  reviewAssignments    ReviewAssignment[]
+  reviewsSubject       Review[]               @relation("ReviewSubject")
+  nominationsAsSubject ReviewerNomination[]   @relation("NominationSubject")
+  nominationsAsNominee ReviewerNomination[]   @relation("NominationNominee")
+  competencyAssessments EmployeeCompetencyAssessment[]
+  calibrationAdjustments CalibrationAdjustment[]
+  developmentPlans     DevelopmentPlan[]
+
+  @@map("employees")
+}
+
+model ReportingRelationship {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId       String    @map("employee_id") @db.Uuid
+  managerId        String    @map("manager_id") @db.Uuid
+  relationshipType String    @default("DIRECT") @map("relationship_type")
+  effectiveFrom    DateTime  @default(now()) @map("effective_from") @db.Date
+  effectiveTo      DateTime? @map("effective_to") @db.Date
+
+  employee Employee @relation("EmployeeRel", fields: [employeeId], references: [id], onDelete: Cascade)
+  manager  Employee @relation("ManagerRel", fields: [managerId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, relationshipType, effectiveFrom])
+  @@map("reporting_relationships")
+}
+
+model Goal {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerEmployeeId String        @map("owner_employee_id") @db.Uuid
+  title           String
+  description     String?
+  period          String
+  weight          Decimal?      @db.Decimal(5, 2)
+  targetDate      DateTime?     @map("target_date") @db.Date
+  status          String        @default("NOT_STARTED")
+  progressPct     Decimal       @default(0) @map("progress_pct") @db.Decimal(5, 2)
+  parentGoalId    String?       @map("parent_goal_id") @db.Uuid
+  scope           String        @default("INDIVIDUAL")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @default(now()) @map("updated_at")
+
+  ownerEmployee Employee      @relation(fields: [ownerEmployeeId], references: [id], onDelete: Cascade)
+  parentGoal    Goal?         @relation("GoalHierarchy", fields: [parentGoalId], references: [id])
+  childGoals    Goal[]        @relation("GoalHierarchy")
+  updates       GoalUpdate[]
+  comments      GoalComment[]
+  approvals     GoalApproval[]
+
+  @@index([ownerEmployeeId])
+  @@map("goals")
+}
+
+model GoalUpdate {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  goalId      String   @map("goal_id") @db.Uuid
+  note        String?
+  progressPct Decimal? @map("progress_pct") @db.Decimal(5, 2)
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  goal   Goal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [createdBy], references: [id])
+
+  @@map("goal_updates")
+}
+
+model GoalComment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  goalId    String   @map("goal_id") @db.Uuid
+  authorId  String?  @map("author_id") @db.Uuid
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  goal   Goal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id])
+
+  @@map("goal_comments")
+}
+
+model GoalApproval {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  goalId     String   @map("goal_id") @db.Uuid
+  approverId String   @map("approver_id") @db.Uuid
+  status     String
+  comment    String?
+  decidedAt  DateTime @default(now()) @map("decided_at")
+
+  goal     Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  approver User @relation(fields: [approverId], references: [id])
+
+  @@map("goal_approvals")
+}
+
+model FeedbackEntry {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fromUserId String?  @map("from_user_id") @db.Uuid
+  toUserId   String?  @map("to_user_id") @db.Uuid
+  body       String
+  visibility String   @default("PRIVATE")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  fromUser User?         @relation("FeedbackFromUser", fields: [fromUserId], references: [id])
+  toUser   User?         @relation("FeedbackToUser", fields: [toUserId], references: [id])
+  tags     FeedbackTag[]
+
+  @@map("feedback_entries")
+}
+
+model FeedbackRequest {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fromUserId String   @map("from_user_id") @db.Uuid
+  toUserId   String   @map("to_user_id") @db.Uuid
+  topic      String
+  status     String   @default("OPEN")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  fromUser User @relation("FeedbackReqFromUser", fields: [fromUserId], references: [id])
+  toUser   User @relation("FeedbackReqToUser", fields: [toUserId], references: [id])
+
+  @@map("feedback_requests")
+}
+
+model FeedbackTag {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  feedbackId String @map("feedback_id") @db.Uuid
+  tag        String
+
+  feedbackEntry FeedbackEntry @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@map("feedback_tags")
+}
+
+model Checkin {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  managerId   String   @map("manager_id") @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  scheduledAt DateTime @map("scheduled_at")
+  status      String   @default("SCHEDULED")
+  mood        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  manager  User            @relation("CheckinManager", fields: [managerId], references: [id])
+  employee User            @relation("CheckinEmployee", fields: [employeeId], references: [id])
+  notes    CheckinNote[]
+  actions  CheckinAction[]
+
+  @@map("checkins")
+}
+
+model CheckinNote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  checkinId String   @map("checkin_id") @db.Uuid
+  body      String
+  authorId  String?  @map("author_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  checkin Checkin @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+  author  User?   @relation(fields: [authorId], references: [id])
+
+  @@map("checkin_notes")
+}
+
+model CheckinAction {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  checkinId String    @map("checkin_id") @db.Uuid
+  title     String
+  dueDate   DateTime? @map("due_date") @db.Date
+  status    String    @default("OPEN")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  checkin Checkin @relation(fields: [checkinId], references: [id], onDelete: Cascade)
+
+  @@map("checkin_actions")
+}
+
+model ReviewCycle {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  cycleType String   @default("ANNUAL") @map("cycle_type")
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  status    String   @default("DRAFT")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  assignments          ReviewAssignment[]
+  reviews              Review[]
+  nominations          ReviewerNomination[]
+  calibrationSessions  CalibrationSession[]
+
+  @@map("review_cycles")
+}
+
+model ReviewTemplate {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  jsonSchema Json     @default("{}") @map("json_schema")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sections ReviewSection[]
+
+  @@map("review_templates")
+}
+
+model ReviewSection {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId String @map("template_id") @db.Uuid
+  title      String
+  sortOrder  Int    @default(0) @map("sort_order")
+
+  template  ReviewTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  responses ReviewResponse[]
+
+  @@map("review_sections")
+}
+
+model ReviewAssignment {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId    String @map("cycle_id") @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  reviewerId String @map("reviewer_id") @db.Uuid
+  role       String
+  status     String @default("PENDING")
+
+  cycle    ReviewCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employee Employee    @relation(fields: [employeeId], references: [id])
+  reviewer User        @relation(fields: [reviewerId], references: [id])
+
+  @@unique([cycleId, employeeId, reviewerId, role])
+  @@map("review_assignments")
+}
+
+model Review {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId    String   @map("cycle_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  reviewerId String   @map("reviewer_id") @db.Uuid
+  status     String   @default("DRAFT")
+  rating     Decimal? @db.Decimal(4, 2)
+  summary    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+
+  cycle    ReviewCycle      @relation(fields: [cycleId], references: [id])
+  employee Employee         @relation("ReviewSubject", fields: [employeeId], references: [id])
+  reviewer User             @relation("ReviewerUser", fields: [reviewerId], references: [id])
+  responses ReviewResponse[]
+
+  @@index([cycleId])
+  @@map("reviews")
+}
+
+model ReviewResponse {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reviewId  String   @map("review_id") @db.Uuid
+  sectionId String?  @map("section_id") @db.Uuid
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review  Review         @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  section ReviewSection? @relation(fields: [sectionId], references: [id])
+
+  @@map("review_responses")
+}
+
+model ReviewerNomination {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId   String   @map("cycle_id") @db.Uuid
+  subjectId String   @map("subject_id") @db.Uuid
+  nomineeId String   @map("nominee_id") @db.Uuid
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  cycle   ReviewCycle @relation(fields: [cycleId], references: [id])
+  subject Employee    @relation("NominationSubject", fields: [subjectId], references: [id])
+  nominee Employee    @relation("NominationNominee", fields: [nomineeId], references: [id])
+
+  @@map("reviewer_nominations")
+}
+
+model Competency {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  mappings    CompetencyMapping[]
+  assessments EmployeeCompetencyAssessment[]
+
+  @@map("competencies")
+}
+
+model CompetencyMapping {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  competencyId     String   @map("competency_id") @db.Uuid
+  jobFamily        String?  @map("job_family")
+  proficiencyLevel Int?     @map("proficiency_level")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@map("competency_mappings")
+}
+
+model EmployeeCompetencyAssessment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId   String   @map("employee_id") @db.Uuid
+  competencyId String   @map("competency_id") @db.Uuid
+  score        Decimal? @db.Decimal(4, 2)
+  assessedAt   DateTime @default(now()) @map("assessed_at")
+
+  employee   Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id])
+
+  @@map("employee_competency_assessments")
+}
+
+model RatingScale {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  definition Json     @default("[]")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  records RatingRecord[]
+
+  @@map("rating_scales")
+}
+
+model RatingRecord {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subjectType String   @map("subject_type")
+  subjectId   String   @map("subject_id") @db.Uuid
+  scaleId     String?  @map("scale_id") @db.Uuid
+  value       Decimal? @db.Decimal(6, 3)
+  recordedBy  String?  @map("recorded_by") @db.Uuid
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+
+  scale RatingScale? @relation(fields: [scaleId], references: [id])
+  user  User?        @relation(fields: [recordedBy], references: [id])
+
+  @@map("rating_records")
+}
+
+model CalibrationSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cycleId   String   @map("cycle_id") @db.Uuid
+  name      String
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  cycle       ReviewCycle             @relation(fields: [cycleId], references: [id])
+  adjustments CalibrationAdjustment[]
+
+  @@map("calibration_sessions")
+}
+
+model CalibrationAdjustment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId   String   @map("session_id") @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  fromRating  Decimal? @map("from_rating") @db.Decimal(4, 2)
+  toRating    Decimal? @map("to_rating") @db.Decimal(4, 2)
+  rationale   String?
+  adjustedBy  String?  @map("adjusted_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  session  CalibrationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  employee Employee           @relation(fields: [employeeId], references: [id])
+  user     User?              @relation(fields: [adjustedBy], references: [id])
+
+  @@map("calibration_adjustments")
+}
+
+model DevelopmentPlan {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  title      String
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+
+  employee Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  actions  DevelopmentAction[]
+
+  @@map("development_plans")
+}
+
+model DevelopmentAction {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId    String    @map("plan_id") @db.Uuid
+  title     String
+  dueDate   DateTime? @map("due_date") @db.Date
+  status    String    @default("OPEN")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  plan DevelopmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("development_actions")
+}
+
+model Recognition {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fromUserId String?  @map("from_user_id") @db.Uuid
+  toUserId   String?  @map("to_user_id") @db.Uuid
+  message    String
+  badge      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  fromUser User? @relation("RecognitionFromUser", fields: [fromUserId], references: [id])
+  toUser   User? @relation("RecognitionToUser", fields: [toUserId], references: [id])
+
+  @@map("recognitions")
+}
+
+model Attachment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerType  String   @map("owner_type")
+  ownerId    String   @map("owner_id") @db.Uuid
+  storageUrl String   @map("storage_url")
+  mimeType   String?  @map("mime_type")
+  createdBy  String?  @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [createdBy], references: [id])
+
+  @@map("attachments")
+}
+
+model NotificationEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType String   @map("event_type")
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notification_events")
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Uuid
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

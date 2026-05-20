@@ -1,0 +1,22 @@
+{
+  "name": "epfms-monorepo",
+  "private": true,
+  "description": "Run all Node microservices from one terminal",
+  "scripts": {
+    "install:node-services": "npm install --prefix backend/services/auth-service && npm install --prefix backend/services/user-service && npm install --prefix backend/services/notification-service && npm install --prefix backend/services/api-gateway && npm install --prefix backend/services/performance-review-service && npm install --prefix backend/services/feedback-service && npm install --prefix backend/services/analytics-service && npm install --prefix backend/services/ai-insights-service",
+    "install:frontend": "npm install --prefix frontend",
+    "start:node": "concurrently -k -n auth,user,notify,gateway,perf,fb,analytics,ai -c blue,green,yellow,magenta,cyan,blueBright,whiteBright,gray \"npm run start --prefix backend/services/auth-service\" \"npm run start --prefix backend/services/user-service\" \"npm run start --prefix backend/services/notification-service\" \"npm run start --prefix backend/services/api-gateway\" \"npm run start --prefix backend/services/performance-review-service\" \"npm run start --prefix backend/services/feedback-service\" \"npm run start --prefix backend/services/analytics-service\" \"npm run start --prefix backend/services/ai-insights-service\"",
+    "dev:node": "concurrently -k -n auth,user,notify,gateway,perf,fb,analytics,ai -c blue,green,yellow,magenta,cyan,blueBright,whiteBright,gray \"npm run dev --prefix backend/services/auth-service\" \"npm run dev --prefix backend/services/user-service\" \"npm run dev --prefix backend/services/notification-service\" \"npm run dev --prefix backend/services/api-gateway\" \"npm run dev --prefix backend/services/performance-review-service\" \"npm run dev --prefix backend/services/feedback-service\" \"npm run dev --prefix backend/services/analytics-service\" \"npm run dev --prefix backend/services/ai-insights-service\"",
+    "start:backend": "npm run start:node",
+    "dev:backend": "npm run dev:node",
+    "start:frontend": "npm run dev --prefix frontend",
+    "start:all": "concurrently -k -n backend,frontend -c magenta,green \"npm run start:backend\" \"npm run start:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "workspaces": [
+    "backend/packages/*",
+    "backend/services/*"
+  ]
+}

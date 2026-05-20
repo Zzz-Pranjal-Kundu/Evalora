@@ -1,0 +1,25 @@
+name: epfms
+
+services:
+  epfms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: epfms-all-in-one
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "3001:3001"
+      - "3002:3002"
+      - "3003:3003"
+      - "8001:8001"
+      - "8002:8002"
+      - "8004:8004"
+      - "8005:8005"
+    volumes:
+      - epfms_data:/data
+
+volumes:
+  epfms_data:
+    name: epfms_sqlite_data

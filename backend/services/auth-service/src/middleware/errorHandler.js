@@ -1,0 +1,14 @@
+import { logger } from "../utils/logger.js";
+
+export function errorHandler(err, req, res, next) {
+  const status = err.statusCode || 500;
+  if (status >= 500) {
+    logger.error(err.message, { stack: err.stack, path: req.path });
+  }
+  res.status(status).json({
+    message: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV !== "production" && status >= 500
+      ? { detail: err.stack }
+      : {}),
+  });
+}

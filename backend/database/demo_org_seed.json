@@ -1,0 +1,411 @@
+{
+  "version": 4,
+  "about": "Expanded Acme Corp demo: multiple departments and squads. Formal reviews: MANAGER, HR_ADMIN, LEADERSHIP, SUPER_ADMIN, ADMIN create or edit review records; EMPLOYEES primarily view their own and use feedback/check-ins where allowed. defaultPassword applies unless a user has password. Prefer a fresh user.db after large id/hierarchy changes.",
+  "markerEmail": "dana.lead@epfms.demo",
+  "defaultPassword": "Demo12345!",
+  "roles": [
+    "SUPER_ADMIN",
+    "LEADERSHIP",
+    "HR_ADMIN",
+    "ADMIN",
+    "MANAGER",
+    "EMPLOYEE"
+  ],
+  "org": {
+    "id": "org-acme-demo-001",
+    "name": "Acme Corp (Demo)",
+    "slug": "acme-demo"
+  },
+  "teams": [
+    {
+      "id": "team-eng-001",
+      "name": "Engineering",
+      "description": "Product and platform engineering",
+      "leadUserId": "11111111-1111-4111-8111-111111111104",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111104",
+        "11111111-1111-4111-8111-111111111106",
+        "11111111-1111-4111-8111-111111111107",
+        "11111111-1111-4111-8111-111111111108",
+        "11111111-1111-4111-8111-111111111126"
+      ]
+    },
+    {
+      "id": "team-cs-001",
+      "name": "Customer Success",
+      "description": "Adoption, renewals, and customer outcomes",
+      "leadUserId": "11111111-1111-4111-8111-111111111105",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111105",
+        "11111111-1111-4111-8111-111111111109",
+        "11111111-1111-4111-8111-111111111110"
+      ]
+    },
+    {
+      "id": "team-sales-ent-001",
+      "name": "Sales — Enterprise",
+      "description": "Named accounts and expansion revenue",
+      "leadUserId": "11111111-1111-4111-8111-111111111113",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111113",
+        "11111111-1111-4111-8111-111111111114",
+        "11111111-1111-4111-8111-111111111115",
+        "11111111-1111-4111-8111-111111111116"
+      ]
+    },
+    {
+      "id": "team-product-001",
+      "name": "Product & Design",
+      "description": "Roadmap, discovery, and UX",
+      "leadUserId": "11111111-1111-4111-8111-111111111117",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111117",
+        "11111111-1111-4111-8111-111111111118",
+        "11111111-1111-4111-8111-111111111119"
+      ]
+    },
+    {
+      "id": "team-mkt-growth-001",
+      "name": "Marketing — Growth",
+      "description": "Demand gen, campaigns, and brand",
+      "leadUserId": "11111111-1111-4111-8111-111111111120",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111120",
+        "11111111-1111-4111-8111-111111111121"
+      ]
+    },
+    {
+      "id": "team-finance-001",
+      "name": "Finance — FP&A",
+      "description": "Forecasting, close, and compliance support",
+      "leadUserId": "11111111-1111-4111-8111-111111111122",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111122",
+        "11111111-1111-4111-8111-111111111123"
+      ]
+    },
+    {
+      "id": "team-it-001",
+      "name": "IT & Security",
+      "description": "Identity, endpoints, and production access",
+      "leadUserId": "11111111-1111-4111-8111-111111111124",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111101",
+        "11111111-1111-4111-8111-111111111111",
+        "11111111-1111-4111-8111-111111111124"
+      ]
+    },
+    {
+      "id": "team-people-ops-001",
+      "name": "People Operations",
+      "description": "HR programs, onboarding, and employee relations",
+      "leadUserId": "11111111-1111-4111-8111-111111111103",
+      "memberUserIds": [
+        "11111111-1111-4111-8111-111111111103",
+        "11111111-1111-4111-8111-111111111125"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "11111111-1111-4111-8111-111111111101",
+      "email": "ops.admin@epfms.demo",
+      "firstName": "Ops",
+      "lastName": "Admin",
+      "role": "SUPER_ADMIN",
+      "title": "Platform Administrator",
+      "department": "IT",
+      "location": "Remote",
+      "managerId": null
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "email": "dana.lead@epfms.demo",
+      "firstName": "Dana",
+      "lastName": "Lead",
+      "role": "LEADERSHIP",
+      "title": "Chief Operating Officer",
+      "department": "Executive",
+      "location": "New York",
+      "managerId": null
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111103",
+      "email": "hr.pat@epfms.demo",
+      "firstName": "Pat",
+      "lastName": "Rivera",
+      "role": "HR_ADMIN",
+      "title": "HR Business Partner",
+      "department": "People",
+      "location": "Chicago",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111104",
+      "email": "maya.singh@epfms.demo",
+      "firstName": "Maya",
+      "lastName": "Singh",
+      "role": "MANAGER",
+      "title": "Director of Engineering",
+      "department": "Engineering",
+      "location": "Austin",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111105",
+      "email": "jordan.cs@epfms.demo",
+      "firstName": "Jordan",
+      "lastName": "Lee",
+      "role": "MANAGER",
+      "title": "Director of Customer Success",
+      "department": "Customer Success",
+      "location": "Denver",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111106",
+      "email": "liam.park@epfms.demo",
+      "firstName": "Liam",
+      "lastName": "Park",
+      "role": "EMPLOYEE",
+      "title": "Senior Software Engineer",
+      "department": "Engineering",
+      "location": "Remote",
+      "managerId": "11111111-1111-4111-8111-111111111104"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111107",
+      "email": "nora.wu@epfms.demo",
+      "firstName": "Nora",
+      "lastName": "Wu",
+      "role": "EMPLOYEE",
+      "title": "Software Engineer",
+      "department": "Engineering",
+      "location": "Seattle",
+      "managerId": "11111111-1111-4111-8111-111111111104"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111108",
+      "email": "ava.lee@epfms.demo",
+      "firstName": "Ava",
+      "lastName": "Lee",
+      "role": "EMPLOYEE",
+      "title": "Product Engineer",
+      "department": "Engineering",
+      "location": "Remote",
+      "managerId": "11111111-1111-4111-8111-111111111104"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111109",
+      "email": "sam.rivera@epfms.demo",
+      "firstName": "Sam",
+      "lastName": "Rivera",
+      "role": "EMPLOYEE",
+      "title": "Senior Customer Success Manager",
+      "department": "Customer Success",
+      "location": "Phoenix",
+      "managerId": "11111111-1111-4111-8111-111111111105"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111110",
+      "email": "taylor.brook@epfms.demo",
+      "firstName": "Taylor",
+      "lastName": "Brook",
+      "role": "EMPLOYEE",
+      "title": "Customer Success Manager",
+      "department": "Customer Success",
+      "location": "Remote",
+      "managerId": "11111111-1111-4111-8111-111111111105"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "email": "casey.martinez@epfms.demo",
+      "firstName": "Casey",
+      "lastName": "Martinez",
+      "role": "ADMIN",
+      "title": "IT Operations Administrator",
+      "department": "IT",
+      "location": "Dallas",
+      "managerId": "11111111-1111-4111-8111-111111111124"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111112",
+      "email": "riley.chen@epfms.demo",
+      "firstName": "Riley",
+      "lastName": "Chen",
+      "role": "LEADERSHIP",
+      "title": "Chief Revenue Officer",
+      "department": "Revenue",
+      "location": "San Francisco",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111113",
+      "email": "morgan.lee@epfms.demo",
+      "firstName": "Morgan",
+      "lastName": "Lee",
+      "role": "MANAGER",
+      "title": "VP, Enterprise Sales",
+      "department": "Sales",
+      "location": "Boston",
+      "managerId": "11111111-1111-4111-8111-111111111112"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111114",
+      "email": "alex.ong@epfms.demo",
+      "firstName": "Alex",
+      "lastName": "Ong",
+      "role": "EMPLOYEE",
+      "title": "Enterprise Account Executive",
+      "department": "Sales",
+      "location": "Atlanta",
+      "managerId": "11111111-1111-4111-8111-111111111113"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111115",
+      "email": "jamie.soto@epfms.demo",
+      "firstName": "Jamie",
+      "lastName": "Soto",
+      "role": "EMPLOYEE",
+      "title": "Account Executive",
+      "department": "Sales",
+      "location": "Chicago",
+      "managerId": "11111111-1111-4111-8111-111111111113"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111116",
+      "email": "reese.kim@epfms.demo",
+      "firstName": "Reese",
+      "lastName": "Kim",
+      "role": "EMPLOYEE",
+      "title": "Sales Development Representative",
+      "department": "Sales",
+      "location": "Remote",
+      "managerId": "11111111-1111-4111-8111-111111111113"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111117",
+      "email": "parker.moore@epfms.demo",
+      "firstName": "Parker",
+      "lastName": "Moore",
+      "role": "MANAGER",
+      "title": "VP, Product",
+      "department": "Product",
+      "location": "Portland",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111118",
+      "email": "quinn.harper@epfms.demo",
+      "firstName": "Quinn",
+      "lastName": "Harper",
+      "role": "EMPLOYEE",
+      "title": "Senior Product Manager",
+      "department": "Product",
+      "location": "Remote",
+      "managerId": "11111111-1111-4111-8111-111111111117"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111119",
+      "email": "sydney.cho@epfms.demo",
+      "firstName": "Sydney",
+      "lastName": "Cho",
+      "role": "EMPLOYEE",
+      "title": "Product Designer",
+      "department": "Product",
+      "location": "Los Angeles",
+      "managerId": "11111111-1111-4111-8111-111111111117"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111120",
+      "email": "drew.agar@epfms.demo",
+      "firstName": "Drew",
+      "lastName": "Agar",
+      "role": "MANAGER",
+      "title": "VP, Marketing",
+      "department": "Marketing",
+      "location": "Toronto",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111121",
+      "email": "blake.rowe@epfms.demo",
+      "firstName": "Blake",
+      "lastName": "Rowe",
+      "role": "EMPLOYEE",
+      "title": "Growth Marketing Manager",
+      "department": "Marketing",
+      "location": "Remote",
+      "managerId": "11111111-1111-4111-8111-111111111120"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111122",
+      "email": "frank.lin@epfms.demo",
+      "firstName": "Frank",
+      "lastName": "Lin",
+      "role": "MANAGER",
+      "title": "Corporate Controller",
+      "department": "Finance",
+      "location": "New York",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111123",
+      "email": "yuki.tanaka@epfms.demo",
+      "firstName": "Yuki",
+      "lastName": "Tanaka",
+      "role": "EMPLOYEE",
+      "title": "Financial Analyst",
+      "department": "Finance",
+      "location": "Remote",
+      "managerId": "11111111-1111-4111-8111-111111111122"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111124",
+      "email": "gale.park@epfms.demo",
+      "firstName": "Gale",
+      "lastName": "Park",
+      "role": "MANAGER",
+      "title": "Director, IT & Security",
+      "department": "IT",
+      "location": "Austin",
+      "managerId": "11111111-1111-4111-8111-111111111102"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111125",
+      "email": "jamie.cohen@epfms.demo",
+      "firstName": "Jamie",
+      "lastName": "Cohen",
+      "role": "EMPLOYEE",
+      "title": "HR Coordinator",
+      "department": "People",
+      "location": "Chicago",
+      "managerId": "11111111-1111-4111-8111-111111111103"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111126",
+      "email": "kai.meng@epfms.demo",
+      "firstName": "Kai",
+      "lastName": "Meng",
+      "role": "EMPLOYEE",
+      "title": "Software Engineer",
+      "department": "Engineering",
+      "location": "Vancouver",
+      "managerId": "11111111-1111-4111-8111-111111111104"
+    }
+  ],
+  "demoData": {
+    "reviewEmployeeEmail": "liam.park@epfms.demo",
+    "reviewManagerEmail": "maya.singh@epfms.demo",
+    "notificationsForEmails": [
+      "liam.park@epfms.demo",
+      "maya.singh@epfms.demo",
+      "jordan.cs@epfms.demo",
+      "hr.pat@epfms.demo",
+      "dana.lead@epfms.demo",
+      "alex.ong@epfms.demo",
+      "quinn.harper@epfms.demo",
+      "parker.moore@epfms.demo"
+    ]
+  }
+}

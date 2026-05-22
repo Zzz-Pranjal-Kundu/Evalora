@@ -5,7 +5,7 @@ import { seedDemoNotifications } from "./seed/demoNotifications.js";
 import { logger } from "./utils/logger.js";
 
 const app = createApp();
-seedDemoNotifications();
+await seedDemoNotifications();
 
 app.listen(env.port, () => {
   logger.info(`Notification service on ${env.port}`);

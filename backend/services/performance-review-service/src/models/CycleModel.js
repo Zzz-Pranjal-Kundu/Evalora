@@ -1,39 +1,69 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../db/database.js";
 
-export function findAll() {
-  return db.prepare("SELECT * FROM review_cycles ORDER BY created_at DESC").all();
+function mapCycle(c) {
+  if (!c) return null;
+  return {
+    id: c.id,
+    name: c.name,
+    start_date: c.startDate.toISOString().slice(0, 10),
+    end_date: c.endDate.toISOString().slice(0, 10),
+    status: c.status,
+    created_at: c.createdAt.toISOString()
+  };
 }
 
-export function findById(cycleId) {
-  return db.prepare("SELECT * FROM review_cycles WHERE id = ?").get(cycleId);
+export async function findAll() {
+  const list = await db.reviewCycle.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  return list.map(mapCycle);
 }
 
-export function insert({ name, start_date, end_date, status = "DRAFT" }) {
+export async function findById(cycleId) {
+  if (!cycleId) return null;
+  const c = await db.reviewCycle.findUnique({
+    where: { id: cycleId }
+  });
+  return mapCycle(c);
+}
+
+export async function insert({ name, start_date, end_date, status = "DRAFT" }) {
   const id = randomUUID();
-  const created_at = new Date().toISOString();
-  db.prepare(
-    `INSERT INTO review_cycles (id, name, start_date, end_date, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(id, name, start_date, end_date, status, created_at);
-  return findById(id);
+  const c = await db.reviewCycle.create({
+    data: {
+      id,
+      name,
+      startDate: new Date(start_date),
+      endDate: new Date(end_date),
+      status
+    }
+  });
+  return findById(c.id);
 }
 
-export function updateFields(cycleId, { name, start_date, end_date, status }) {
-  db.prepare(`UPDATE review_cycles SET name = ?, start_date = ?, end_date = ?, status = ? WHERE id = ?`).run(
-    name,
-    start_date,
-    end_date,
-    status,
-    cycleId
-  );
+export async function updateFields(cycleId, { name, start_date, end_date, status }) {
+  const updateData = {};
+  if (name !== undefined) updateData.name = name;
+  if (start_date !== undefined) updateData.startDate = new Date(start_date);
+  if (end_date !== undefined) updateData.endDate = new Date(end_date);
+  if (status !== undefined) updateData.status = status;
+
+  await db.reviewCycle.update({
+    where: { id: cycleId },
+    data: updateData
+  });
   return findById(cycleId);
 }
 
-export function existsById(cycleId) {
-  return !!db.prepare("SELECT id FROM review_cycles WHERE id = ?").get(cycleId);
+export async function existsById(cycleId) {
+  if (!cycleId) return false;
+  const count = await db.reviewCycle.count({
+    where: { id: cycleId }
+  });
+  return count > 0;
 }
 
-export function count() {
-  return Number(db.prepare("SELECT COUNT(*) AS c FROM review_cycles").get().c);
+export async function count() {
+  return await db.reviewCycle.count();
 }

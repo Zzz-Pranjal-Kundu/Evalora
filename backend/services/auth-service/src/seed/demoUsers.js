@@ -27,10 +27,10 @@ export async function seedDemoUsers() {
     if (!email || !row.id) continue;
     const plain = row.password ?? fallback;
     const passwordHash = await bcrypt.hash(plain, 12);
-    const existing = UserModel.findByEmail(email);
+    const existing = await UserModel.findByEmail(email);
 
     if (!existing) {
-      UserModel.createWithId({
+      await UserModel.createWithId({
         id: row.id,
         email,
         passwordHash,
@@ -42,9 +42,9 @@ export async function seedDemoUsers() {
     }
 
     if (existing.id === row.id) {
-      UserModel.updatePasswordHash(row.id, passwordHash);
+      await UserModel.updatePasswordHash(row.id, passwordHash);
       if (existing.role !== row.role) {
-        UserModel.updateRole(row.id, row.role);
+        await UserModel.updateRole(row.id, row.role);
       }
       refreshed += 1;
       continue;

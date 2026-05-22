@@ -9,16 +9,16 @@ import { ALLOWED_ROLES } from "../constants/roles.js";
 
 const SALT_ROUNDS = 12;
 
-function issueSession(user) {
+async function issueSession(user) {
   const accessToken = AuthService.issueToken(user);
-  const { plain: refreshToken } = RefreshTokenModel.issue(user.id);
+  const { plain: refreshToken } = await RefreshTokenModel.issue(user.id);
   return { user: userToPublic(user), accessToken, refreshToken };
 }
 
 export class AuthService {
   static async register({ email, password, role }) {
     const normalized = email.trim().toLowerCase();
-    const existing = UserModel.findByEmail(normalized);
+    const existing = await UserModel.findByEmail(normalized);
     if (existing) {
       const err = new Error("Email already registered");
       err.statusCode = 409;
@@ -26,18 +26,18 @@ export class AuthService {
     }
     const finalRole = ALLOWED_ROLES.includes(role) ? role : "EMPLOYEE";
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = UserModel.create({
+    const user = await UserModel.create({
       email: normalized,
       passwordHash,
       role: finalRole,
     });
     logger.info("User registered", { userId: user.id, role: user.role });
-    return issueSession(user);
+    return await issueSession(user);
   }
 
   static async login({ email, password }) {
     const normalized = email.trim().toLowerCase();
-    const user = UserModel.findByEmail(normalized);
+    const user = await UserModel.findByEmail(normalized);
     if (!user) {
       const err = new Error("Invalid credentials");
       err.statusCode = 401;
@@ -49,24 +49,24 @@ export class AuthService {
       err.statusCode = 401;
       throw err;
     }
-    return issueSession(user);
+    return await issueSession(user);
   }
 
   static async refresh(plainRefresh) {
-    const userId = RefreshTokenModel.findValidUserId(plainRefresh);
+    const userId = await RefreshTokenModel.findValidUserId(plainRefresh);
     if (!userId) {
       const err = new Error("Invalid refresh token");
       err.statusCode = 401;
       throw err;
     }
-    const user = UserModel.findById(userId);
+    const user = await UserModel.findById(userId);
     if (!user) {
       const err = new Error("Invalid refresh token");
       err.statusCode = 401;
       throw err;
     }
-    RefreshTokenModel.revokeByPlain(plainRefresh);
-    return issueSession(user);
+    await RefreshTokenModel.revokeByPlain(plainRefresh);
+    return await issueSession(user);
   }
 
   static issueToken(user) {

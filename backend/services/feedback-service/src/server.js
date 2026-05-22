@@ -5,7 +5,7 @@ import { logger } from "./utils/logger.js";
 import { seedDemoFeedback } from "./seed/seedDemo.js";
 
 const app = createApp();
-seedDemoFeedback();
+await seedDemoFeedback();
 
 app.listen(env.port, () => {
   logger.info(`Feedback service listening on ${env.port}`);

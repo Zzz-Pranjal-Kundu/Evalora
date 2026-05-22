@@ -17,37 +17,46 @@ function refreshTtlMs() {
 
 export class RefreshTokenModel {
   /**
-   * @returns {{ plain: string }}
+   * @returns {Promise<{ plain: string }>}
    */
-  static issue(userId) {
+  static async issue(userId) {
     const plain = randomBytes(40).toString("base64url");
     const id = randomUUID();
-    const now = new Date().toISOString();
-    const exp = new Date(Date.now() + refreshTtlMs()).toISOString();
-    db.prepare(
-      `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at)
-       VALUES (?, ?, ?, ?, ?)`
-    ).run(id, userId, hashToken(plain), exp, now);
+    const exp = new Date(Date.now() + refreshTtlMs());
+    await db.refreshToken.create({
+      data: {
+        id,
+        userId,
+        tokenHash: hashToken(plain),
+        expiresAt: exp
+      }
+    });
     return { plain };
   }
 
-  static findValidUserId(plain) {
+  static async findValidUserId(plain) {
     if (!plain) return null;
     const h = hashToken(plain);
-    const now = new Date().toISOString();
-    const row = db
-      .prepare(`SELECT user_id FROM refresh_tokens WHERE token_hash = ? AND expires_at > ?`)
-      .get(h, now);
-    return row?.user_id ?? null;
+    const row = await db.refreshToken.findFirst({
+      where: {
+        tokenHash: h,
+        expiresAt: { gt: new Date() }
+      }
+    });
+    return row?.userId ?? null;
   }
 
-  static revokeByPlain(plain) {
+  static async revokeByPlain(plain) {
     if (!plain) return;
     const h = hashToken(plain);
-    db.prepare(`DELETE FROM refresh_tokens WHERE token_hash = ?`).run(h);
+    await db.refreshToken.deleteMany({
+      where: { tokenHash: h }
+    });
   }
 
-  static revokeAllForUser(userId) {
-    db.prepare(`DELETE FROM refresh_tokens WHERE user_id = ?`).run(userId);
+  static async revokeAllForUser(userId) {
+    await db.refreshToken.deleteMany({
+      where: { userId }
+    });
   }
 }

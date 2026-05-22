@@ -1,0 +1,15 @@
+name: epfms-mongodb
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: epfms-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - epfms_mongodata:/data/db
+
+volumes:
+  epfms_mongodata:

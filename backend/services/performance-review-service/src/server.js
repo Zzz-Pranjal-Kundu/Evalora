@@ -6,8 +6,8 @@ import { seedDemoReviews, seedIfEmpty } from "./seed/seedDemo.js";
 
 const app = createApp();
 
-seedIfEmpty();
-seedDemoReviews();
+await seedIfEmpty();
+await seedDemoReviews();
 
 app.listen(env.port, () => {
   logger.info(`Performance review service listening on ${env.port}`);

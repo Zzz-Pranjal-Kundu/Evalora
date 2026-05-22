@@ -1,61 +1,172 @@
 import { db } from "../db/database.js";
 
 export class ProfileModel {
-  static findByUserId(userId) {
-    return db.prepare("SELECT * FROM profiles WHERE user_id = ?").get(userId) ?? null;
+  static async findByUserId(userId) {
+    if (!userId) return null;
+    const employee = await db.employee.findUnique({
+      where: { userId },
+      include: {
+        department: true,
+        managers: {
+          include: {
+            manager: true
+          }
+        }
+      }
+    });
+    if (!employee) return null;
+    return {
+      user_id: employee.userId,
+      full_name: employee.fullName,
+      department: employee.department?.name || null,
+      job_title: employee.jobTitle,
+      manager_id: employee.managers[0]?.manager?.userId || null,
+      team: null,
+      preferences_json: null,
+      created_at: employee.createdAt.toISOString(),
+      updated_at: employee.updatedAt.toISOString()
+    };
   }
 
-  static findAll() {
-    return db.prepare("SELECT * FROM profiles ORDER BY full_name").all();
+  static async findAll() {
+    const employees = await db.employee.findMany({
+      include: {
+        department: true,
+        managers: {
+          include: {
+            manager: true
+          }
+        }
+      },
+      orderBy: {
+        fullName: 'asc'
+      }
+    });
+    return employees.map((emp) => ({
+      user_id: emp.userId,
+      full_name: emp.fullName,
+      department: emp.department?.name || null,
+      job_title: emp.jobTitle,
+      manager_id: emp.managers[0]?.manager?.userId || null,
+      team: null,
+      preferences_json: null,
+      created_at: emp.createdAt.toISOString(),
+      updated_at: emp.updatedAt.toISOString()
+    }));
   }
 
   /** Direct reports only (for manager visibility in downstream services). */
-  static listUserIdsByManagerId(managerId) {
+  static async listUserIdsByManagerId(managerId) {
     if (!managerId) return [];
-    return db
-      .prepare("SELECT user_id FROM profiles WHERE manager_id = ?")
-      .all(managerId)
-      .map((r) => r.user_id);
+    const mgrEmp = await db.employee.findUnique({
+      where: { userId: managerId }
+    });
+    if (!mgrEmp) return [];
+
+    const relationships = await db.reportingRelationship.findMany({
+      where: { managerId: mgrEmp.id },
+      include: {
+        employee: true
+      }
+    });
+    return relationships.map((r) => r.employee.userId).filter(Boolean);
   }
 
-  static create({ userId, fullName, department, jobTitle, managerId, team, preferences }) {
-    const now = new Date().toISOString();
-    const prefs = preferences ? JSON.stringify(preferences) : null;
-    db.prepare(
-      `INSERT INTO profiles (user_id, full_name, department, job_title, manager_id, team, preferences_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      userId,
-      fullName,
-      department || null,
-      jobTitle || null,
-      managerId || null,
-      team || null,
-      prefs,
-      now,
-      now
-    );
+  static async create({ userId, fullName, department, jobTitle, managerId, team, preferences }) {
+    let deptId = undefined;
+    if (department) {
+      let dbDept = await db.department.findFirst({
+        where: { name: department }
+      });
+      if (!dbDept) {
+        dbDept = await db.department.create({
+          data: { name: department }
+        });
+      }
+      deptId = dbDept.id;
+    }
+
+    const employee = await db.employee.create({
+      data: {
+        userId,
+        fullName: fullName || "New User",
+        jobTitle,
+        departmentId: deptId
+      }
+    });
+
+    if (managerId) {
+      const mgrEmp = await db.employee.findUnique({
+        where: { userId: managerId }
+      });
+      if (mgrEmp) {
+        await db.reportingRelationship.create({
+          data: {
+            employeeId: employee.id,
+            managerId: mgrEmp.id,
+            relationshipType: 'DIRECT'
+          }
+        });
+      }
+    }
+
     return ProfileModel.findByUserId(userId);
   }
 
-  static update(userId, fields) {
-    const existing = ProfileModel.findByUserId(userId);
+  static async update(userId, fields) {
+    const existing = await db.employee.findUnique({
+      where: { userId },
+      include: {
+        managers: true
+      }
+    });
     if (!existing) return null;
-    const now = new Date().toISOString();
-    const fullName = fields.fullName ?? existing.full_name;
-    const department = fields.department ?? existing.department;
-    const jobTitle = fields.jobTitle ?? existing.job_title;
-    const managerId =
-      fields.managerId !== undefined ? fields.managerId : existing.manager_id;
-    const team = fields.team !== undefined ? fields.team : (existing.team ?? null);
-    let preferencesJson = existing.preferences_json;
-    if (fields.preferences !== undefined) {
-      preferencesJson = JSON.stringify(fields.preferences);
+
+    let deptId = undefined;
+    if (fields.department !== undefined) {
+      if (fields.department) {
+        let dbDept = await db.department.findFirst({
+          where: { name: fields.department }
+        });
+        if (!dbDept) {
+          dbDept = await db.department.create({
+            data: { name: fields.department }
+          });
+        }
+          deptId = dbDept.id;
+      }
     }
-    db.prepare(
-      `UPDATE profiles SET full_name = ?, department = ?, job_title = ?, manager_id = ?, team = ?, preferences_json = ?, updated_at = ?
-       WHERE user_id = ?`
-    ).run(fullName, department, jobTitle, managerId, team, preferencesJson, now, userId);
+
+    await db.employee.update({
+      where: { userId },
+      data: {
+        fullName: fields.fullName !== undefined ? fields.fullName : existing.fullName,
+        jobTitle: fields.jobTitle !== undefined ? fields.jobTitle : existing.jobTitle,
+        departmentId: fields.department !== undefined ? deptId : existing.departmentId,
+        updatedAt: new Date()
+      }
+    });
+
+    if (fields.managerId !== undefined) {
+      await db.reportingRelationship.deleteMany({
+        where: { employeeId: existing.id }
+      });
+      if (fields.managerId) {
+        const mgrEmp = await db.employee.findUnique({
+          where: { userId: fields.managerId }
+        });
+        if (mgrEmp) {
+          await db.reportingRelationship.create({
+            data: {
+              employeeId: existing.id,
+              managerId: mgrEmp.id,
+              relationshipType: 'DIRECT'
+            }
+          });
+        }
+      }
+    }
+
     return ProfileModel.findByUserId(userId);
   }
 }

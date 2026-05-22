@@ -37,7 +37,7 @@ async function canAccessRequest(r, viewerId, roles, managed) {
 export async function listRequests(userId, roles) {
   let rows;
   if (isPrivileged(roles)) {
-    rows = FeedbackRequestModel.findAllOrdered();
+    rows = await FeedbackRequestModel.findAllOrdered();
   } else {
     const managed = await managedUserIds(userId);
     const parts = ["from_user_id = ?", "to_user_id = ?"];
@@ -47,7 +47,7 @@ export async function listRequests(userId, roles) {
       parts.push("to_user_id = ?");
       params.push(m, m);
     }
-    rows = FeedbackRequestModel.findWhereOr(parts, params);
+    rows = await FeedbackRequestModel.findWhereOr(parts, params);
   }
   return rows.filter((r) => {
     const vis = r.visibility || "with_managers";
@@ -67,7 +67,7 @@ export async function createRequest(actorId, body) {
   const visibility = normalizeFeedbackVisibility(body?.visibility);
   const now = new Date().toISOString();
   const id = randomUUID();
-  const row = FeedbackRequestModel.insert({
+  const row = await FeedbackRequestModel.insert({
     id,
     from_user_id: actorId,
     to_user_id,
@@ -100,7 +100,7 @@ export async function createRequest(actorId, body) {
 }
 
 export async function getRequestDetail(requestId, userId, roles) {
-  const r = FeedbackRequestModel.findById(requestId);
+  const r = await FeedbackRequestModel.findById(requestId);
   if (!r) return null;
   const managed = await managedUserIds(userId);
   if (!(await canAccessRequest(r, userId, roles, managed))) {
@@ -108,7 +108,7 @@ export async function getRequestDetail(requestId, userId, roles) {
     err.statusCode = 403;
     throw err;
   }
-  const entries = FeedbackEntryModel.listByRequestId(requestId);
+  const entries = await FeedbackEntryModel.listByRequestId(requestId);
   return { request: r, entries };
 }
 
@@ -118,7 +118,7 @@ export async function addEntry(requestId, actorId, roles, content) {
     err.statusCode = 400;
     throw err;
   }
-  const r = FeedbackRequestModel.findById(requestId);
+  const r = await FeedbackRequestModel.findById(requestId);
   if (!r) {
     const err = new Error("Not found");
     err.statusCode = 404;
@@ -137,14 +137,14 @@ export async function addEntry(requestId, actorId, roles, content) {
   }
   const now = new Date().toISOString();
   const eid = randomUUID();
-  const entry = FeedbackEntryModel.insert({
+  const entry = await FeedbackEntryModel.insert({
     id: eid,
     request_id: requestId,
     author_id: actorId,
     content,
     created_at: now,
   });
-  FeedbackRequestModel.markCompleted(requestId);
+  await FeedbackRequestModel.markCompleted(requestId);
   await recordEvent("FEEDBACK_ENTRY_CREATED", { requestId, entryId: eid });
   const otherId = actorId === r.to_user_id ? r.from_user_id : r.to_user_id;
   const authorName = await userClient.displayName(actorId);

@@ -18,14 +18,14 @@ function filterProfileRowsToDemoOrg(rows) {
 }
 
 export class ProfileService {
-  static createInternal({ userId, fullName, department, jobTitle, managerId, team }) {
-    const existing = ProfileModel.findByUserId(userId);
+  static async createInternal({ userId, fullName, department, jobTitle, managerId, team }) {
+    const existing = await ProfileModel.findByUserId(userId);
     if (existing) {
       const err = new Error("Profile already exists");
       err.statusCode = 409;
       throw err;
     }
-    const row = ProfileModel.create({
+    const row = await ProfileModel.create({
       userId,
       fullName: fullName || "New User",
       department,
@@ -36,8 +36,8 @@ export class ProfileService {
     return profileFromRow(row);
   }
 
-  static getMe(userId) {
-    const row = ProfileModel.findByUserId(userId);
+  static async getMe(userId) {
+    const row = await ProfileModel.findByUserId(userId);
     if (!row) {
       const err = new Error("Profile not found");
       err.statusCode = 404;
@@ -46,14 +46,14 @@ export class ProfileService {
     return profileFromRow(row);
   }
 
-  static updateMe(userId, body) {
-    const row = ProfileModel.findByUserId(userId);
+  static async updateMe(userId, body) {
+    const row = await ProfileModel.findByUserId(userId);
     if (!row) {
       const err = new Error("Profile not found");
       err.statusCode = 404;
       throw err;
     }
-    const updated = ProfileModel.update(userId, {
+    const updated = await ProfileModel.update(userId, {
       fullName: body.fullName,
       department: body.department,
       jobTitle: body.jobTitle,
@@ -63,45 +63,45 @@ export class ProfileService {
     return profileFromRow(updated);
   }
 
-  static setManager(targetUserId, managerId, actorRoles) {
+  static async setManager(targetUserId, managerId, actorRoles) {
     const privileged = ["ADMIN", "MANAGER", "HR_ADMIN", "SUPER_ADMIN", "LEADERSHIP"];
     if (!actorRoles.some((r) => privileged.includes(r))) {
       const err = new Error("Forbidden");
       err.statusCode = 403;
       throw err;
     }
-    const row = ProfileModel.findByUserId(targetUserId);
+    const row = await ProfileModel.findByUserId(targetUserId);
     if (!row) {
       const err = new Error("Profile not found");
       err.statusCode = 404;
       throw err;
     }
-    const updated = ProfileModel.update(targetUserId, { managerId });
+    const updated = await ProfileModel.update(targetUserId, { managerId });
     return profileFromRow(updated);
   }
 
-  static listProfiles(actorRoles) {
+  static async listProfiles(actorRoles) {
     const privileged = ["ADMIN", "MANAGER", "HR_ADMIN", "SUPER_ADMIN", "LEADERSHIP"];
     if (!actorRoles.some((r) => privileged.includes(r))) {
       const err = new Error("Forbidden");
       err.statusCode = 403;
       throw err;
     }
-    return filterProfileRowsToDemoOrg(ProfileModel.findAll()).map((r) => profileFromRow(r));
+    return filterProfileRowsToDemoOrg(await ProfileModel.findAll()).map((r) => profileFromRow(r));
   }
 
   /**
    * Minimal directory for all authenticated users (pick colleagues for feedback, etc.).
    */
-  static listDirectory(actorId) {
-    return filterProfileRowsToDemoOrg(ProfileModel.findAll())
+  static async listDirectory(actorId) {
+    return filterProfileRowsToDemoOrg(await ProfileModel.findAll())
       .filter((row) => row.user_id !== actorId)
       .map((r) => directoryEntryFromRow(r));
   }
 
   /** Service-to-service: minimal profile for feedback routing / notifications. */
-  static getInternalByUserId(userId) {
-    const row = ProfileModel.findByUserId(userId);
+  static async getInternalByUserId(userId) {
+    const row = await ProfileModel.findByUserId(userId);
     if (!row) {
       const err = new Error("Profile not found");
       err.statusCode = 404;
@@ -110,8 +110,8 @@ export class ProfileService {
     return profileFromRow(row);
   }
 
-  static listReportUserIds(managerId) {
-    const ids = ProfileModel.listUserIdsByManagerId(managerId);
+  static async listReportUserIds(managerId) {
+    const ids = await ProfileModel.listUserIdsByManagerId(managerId);
     const allow = demoOrgUserIdSet();
     if (!allow) return ids;
     return ids.filter((id) => allow.has(id));

@@ -1,29 +1,52 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../db/database.js";
 
-export function insertEvent(eventType, payload) {
-  const now = new Date().toISOString();
+export async function insertEvent(eventType, payload) {
+  const now = new Date();
   const id = randomUUID();
   const payloadJson = JSON.stringify(payload ?? {});
-  db.prepare(`INSERT INTO events (id, event_type, payload_json, received_at) VALUES (?, ?, ?, ?)`).run(
-    id,
-    eventType,
-    payloadJson,
-    now
-  );
+  
+  const event = await db.event.create({
+    data: {
+      id,
+      eventType,
+      payloadJson,
+      receivedAt: now
+    }
+  });
+
   const snapId = randomUUID();
-  db.prepare(
-    `INSERT INTO metric_snapshots (id, metric_key, dimensions_json, value, recorded_at)
-     VALUES (?, ?, ?, 1, ?)`
-  ).run(snapId, `event_count:${eventType}`, "{}", now);
-  return { id, event_type: eventType, payload_json: payloadJson, received_at: now };
+  await db.metricSnapshot.create({
+    data: {
+      id: snapId,
+      metricKey: `event_count:${eventType}`,
+      dimensionsJson: "{}",
+      value: 1.0,
+      recordedAt: now
+    }
+  });
+
+  return {
+    id: event.id,
+    event_type: event.eventType,
+    payload_json: event.payloadJson,
+    received_at: event.receivedAt.toISOString()
+  };
 }
 
-export function listRecent(limit) {
-  return db.prepare("SELECT * FROM events ORDER BY received_at DESC LIMIT ?").all(limit);
+export async function listRecent(limit) {
+  const list = await db.event.findMany({
+    orderBy: { receivedAt: 'desc' },
+    take: limit
+  });
+  return list.map((item) => ({
+    id: item.id,
+    event_type: item.eventType,
+    payload_json: item.payloadJson,
+    received_at: item.receivedAt.toISOString()
+  }));
 }
 
-export function countAll() {
-  const totalRow = db.prepare("SELECT COUNT(*) AS c FROM events").get();
-  return Number(totalRow?.c || 0);
+export async function countAll() {
+  return await db.event.count();
 }

@@ -5,8 +5,13 @@ import * as reviewView from "../views/reviewView.js";
 
 const router = Router();
 
-router.get("/", jwtAuth, (req, res) => {
-  res.json(reviewView.toReviewList(reviewService.listReviewsForUser(req.user.id, req.user.roles || [])));
+router.get("/", jwtAuth, async (req, res) => {
+  try {
+    const list = await reviewService.listReviewsForUser(req.user.id, req.user.roles || []);
+    res.json(reviewView.toReviewList(list));
+  } catch (e) {
+    res.status(500).json({ detail: e.message, message: e.message });
+  }
 });
 
 router.post(

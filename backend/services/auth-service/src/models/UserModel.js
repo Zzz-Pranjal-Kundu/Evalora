@@ -1,52 +1,111 @@
-import { randomUUID } from "crypto";
 import { db } from "../db/database.js";
 
 /**
  * Data access layer for users (MVC Model).
  */
 export class UserModel {
-  static findByEmail(email) {
-    const row = db
-      .prepare("SELECT * FROM users WHERE email = ? COLLATE NOCASE")
-      .get(email);
-    return row ?? null;
+  static async findByEmail(email) {
+    if (!email) return null;
+    const user = await db.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    });
+    if (!user) return null;
+    return {
+      ...user,
+      password_hash: user.passwordHash,
+      role: user.userRoles[0]?.role?.code || 'EMPLOYEE',
+      created_at: user.createdAt.toISOString(),
+      updated_at: user.updatedAt.toISOString()
+    };
   }
 
-  static findById(id) {
-    return db.prepare("SELECT * FROM users WHERE id = ?").get(id) ?? null;
+  static async findById(id) {
+    if (!id) return null;
+    const user = await db.user.findUnique({
+      where: { id },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    });
+    if (!user) return null;
+    return {
+      ...user,
+      password_hash: user.passwordHash,
+      role: user.userRoles[0]?.role?.code || 'EMPLOYEE',
+      created_at: user.createdAt.toISOString(),
+      updated_at: user.updatedAt.toISOString()
+    };
   }
 
-  static create({ email, passwordHash, role }) {
-    const id = randomUUID();
-    const now = new Date().toISOString();
-    db.prepare(
-      `INSERT INTO users (id, email, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, email, passwordHash, role, now, now);
-    return UserModel.findById(id);
+  static async create({ email, passwordHash, role }) {
+    let dbRole = await db.role.findUnique({ where: { code: role } });
+    if (!dbRole) {
+      dbRole = await db.role.findFirst({ where: { code: 'EMPLOYEE' } });
+    }
+    const user = await db.user.create({
+      data: {
+        email,
+        passwordHash,
+        userRoles: {
+          create: {
+            roleId: dbRole.id
+          }
+        }
+      }
+    });
+    return UserModel.findById(user.id);
   }
 
   /** Used by demo seed so downstream SQLite services can reference fixed user IDs. */
-  static createWithId({ id, email, passwordHash, role }) {
-    const now = new Date().toISOString();
-    db.prepare(
-      `INSERT INTO users (id, email, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, email, passwordHash, role, now, now);
+  static async createWithId({ id, email, passwordHash, role }) {
+    let dbRole = await db.role.findUnique({ where: { code: role } });
+    if (!dbRole) {
+      dbRole = await db.role.findFirst({ where: { code: 'EMPLOYEE' } });
+    }
+    const user = await db.user.create({
+      data: {
+        id,
+        email,
+        passwordHash,
+        userRoles: {
+          create: {
+            roleId: dbRole.id
+          }
+        }
+      }
+    });
+    return UserModel.findById(user.id);
+  }
+
+  static async updateRole(id, role) {
+    const dbRole = await db.role.findUnique({ where: { code: role } });
+    if (!dbRole) return null;
+    await db.userRole.deleteMany({ where: { userId: id } });
+    await db.userRole.create({
+      data: {
+        userId: id,
+        roleId: dbRole.id
+      }
+    });
     return UserModel.findById(id);
   }
 
-  static updateRole(id, role) {
-    const now = new Date().toISOString();
-    const res = db
-      .prepare("UPDATE users SET role = ?, updated_at = ? WHERE id = ?")
-      .run(role, now, id);
-    return res.changes > 0 ? UserModel.findById(id) : null;
-  }
-
-  static updatePasswordHash(id, passwordHash) {
-    const now = new Date().toISOString();
-    db.prepare(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`).run(passwordHash, now, id);
+  static async updatePasswordHash(id, passwordHash) {
+    await db.user.update({
+      where: { id },
+      data: { passwordHash, updatedAt: new Date() }
+    });
     return UserModel.findById(id);
   }
 }

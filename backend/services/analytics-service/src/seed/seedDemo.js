@@ -2,8 +2,8 @@ import * as AnalyticsService from "../services/analyticsService.js";
 import { db } from "../db/database.js";
 import { logger } from "../utils/logger.js";
 
-export function seedDemoEvents() {
-  const n = db.prepare("SELECT COUNT(*) AS c FROM events").get().c;
+export async function seedDemoEvents() {
+  const n = await db.event.count();
   if (n > 0) return;
   const samples = [
     ["GOAL_CREATED", { owner: "demo", titleHint: "migration" }],
@@ -17,7 +17,7 @@ export function seedDemoEvents() {
     ["CHECKIN_LOGGED", { cadence: "weekly" }],
   ];
   for (const [eventType, payload] of samples) {
-    AnalyticsService.recordEvent(eventType, payload);
+    await AnalyticsService.recordEvent(eventType, payload);
   }
   logger.info("Seeded demo analytics events");
 }

@@ -5,7 +5,7 @@ dotenv.config();
 export const env = {
   port: parseInt(process.env.PORT || "8001", 10),
   nodeEnv: process.env.NODE_ENV || "development",
-  databasePath: process.env.DATABASE_PATH || "../../data/performance.db",
+  databaseUrl: process.env.DATABASE_URL || "postgresql://epfms:epfms@localhost:5432/epfms?schema=public",
   jwtSecret: process.env.JWT_SECRET || "dev-only-secret-change-me",
   notificationServiceUrl: process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3003",
   userServiceUrl: process.env.USER_SERVICE_URL || "http://localhost:3002",

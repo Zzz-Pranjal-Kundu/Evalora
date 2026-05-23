@@ -11,15 +11,15 @@ function normalizeReviewVisibility(raw) {
   return "participants_only";
 }
 
-export function listReviewsForUser(userId, roles) {
+export async function listReviewsForUser(userId, roles) {
   const r = roles || [];
   if (r.some((x) => PRIV.has(x))) {
-    return ReviewModel.findAll();
+    return await ReviewModel.findAll();
   }
   if (r.includes("MANAGER")) {
-    return ReviewModel.findForReviewerOrEmployee(userId);
+    return await ReviewModel.findForReviewerOrEmployee(userId);
   }
-  return ReviewModel.findForEmployee(userId);
+  return await ReviewModel.findForEmployee(userId);
 }
 
 async function notifyManagersOfReview(row, headline) {
@@ -46,13 +46,13 @@ export async function createReview(actor, body) {
     err.statusCode = 403;
     throw err;
   }
-  if (!CycleModel.existsById(cycle_id)) {
+  if (!(await CycleModel.existsById(cycle_id))) {
     const err = new Error("Cycle not found");
     err.statusCode = 400;
     throw err;
   }
   const visibility = normalizeReviewVisibility(body?.visibility);
-  const row = ReviewModel.insert({
+  const row = await ReviewModel.insert({
     cycle_id,
     employee_id,
     reviewer_id,
@@ -80,7 +80,7 @@ export async function createReview(actor, body) {
 }
 
 export async function updateReview(reviewId, actor, body) {
-  const r = ReviewModel.findById(reviewId);
+  const r = await ReviewModel.findById(reviewId);
   if (!r) return null;
   const roles = actor.roles || [];
   if (!roles.includes("ADMIN") && actor.id !== r.reviewer_id) {
@@ -94,7 +94,7 @@ export async function updateReview(reviewId, actor, body) {
   const summary = b.summary !== undefined ? b.summary : r.summary;
   const visibility = b.visibility !== undefined ? normalizeReviewVisibility(b.visibility) : normalizeReviewVisibility(r.visibility);
   const now = new Date().toISOString();
-  const row = ReviewModel.updateFields(reviewId, { status, rating, summary, visibility, updated_at: now });
+  const row = await ReviewModel.updateFields(reviewId, { status, rating, summary, visibility, updated_at: now });
   await sendNotification(row.employee_id, "Performance review updated", `Your review status is now ${row.status}.`);
   await notifyManagersOfReview(row, "Performance review updated");
   return row;

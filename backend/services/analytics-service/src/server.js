@@ -5,7 +5,7 @@ import { logger } from "./utils/logger.js";
 import { seedDemoEvents } from "./seed/seedDemo.js";
 
 const app = createApp();
-seedDemoEvents();
+await seedDemoEvents();
 
 app.listen(env.port, () => {
   logger.info(`Analytics service listening on ${env.port}`);

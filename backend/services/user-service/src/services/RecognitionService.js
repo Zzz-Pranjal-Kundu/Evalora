@@ -31,8 +31,9 @@ function canSeeRecognitionRow(row, viewerId, roles) {
 }
 
 export class RecognitionService {
-  static listFeedForViewer(viewerId, roles, limit = 200) {
-    return RecognitionModel.listFeed(limit)
+  static async listFeedForViewer(viewerId, roles, limit = 200) {
+    const list = await RecognitionModel.listFeed(limit);
+    return list
       .filter((row) => canSeeRecognitionRow(row, viewerId, roles))
       .map(rowToDto);
   }
@@ -58,7 +59,7 @@ export class RecognitionService {
       throw err;
     }
     if (toUserId) {
-      const target = ProfileModel.findByUserId(toUserId);
+      const target = await ProfileModel.findByUserId(toUserId);
       if (!target) {
         const err = new Error("Recipient profile not found");
         err.statusCode = 400;
@@ -70,7 +71,7 @@ export class RecognitionService {
 
     const id = randomUUID();
     const createdAt = new Date().toISOString();
-    const row = RecognitionModel.insert({
+    const row = await RecognitionModel.insert({
       id,
       fromUserId,
       toUserId,
@@ -81,7 +82,7 @@ export class RecognitionService {
     });
 
     if (toUserId) {
-      const fromProfile = ProfileModel.findByUserId(fromUserId);
+      const fromProfile = await ProfileModel.findByUserId(fromUserId);
       const fromName = fromProfile?.full_name || "A colleague";
       const preview = message.length > 160 ? `${message.slice(0, 157)}…` : message;
       await notifyUserInternal(

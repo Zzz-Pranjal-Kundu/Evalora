@@ -4,16 +4,16 @@ import { logger } from "../utils/logger.js";
 import * as FeedbackRequestModel from "../models/FeedbackRequestModel.js";
 import * as FeedbackEntryModel from "../models/FeedbackEntryModel.js";
 
-export function seedDemoFeedback() {
+export async function seedDemoFeedback() {
   const org = loadOrg();
   if (!org?.demoData) return;
   const emp = userIdByEmail(org, org.demoData.reviewEmployeeEmail || "liam.park@epfms.demo");
   const mgr = userIdByEmail(org, org.demoData.reviewManagerEmail || "maya.singh@epfms.demo");
   if (!emp || !mgr) return;
-  if (FeedbackRequestModel.findIdByFromUserTopicLike(emp, "%Q2 customer readout%")) return;
+  if (await FeedbackRequestModel.findIdByFromUserTopicLike(emp, "%Q2 customer readout%")) return;
   const now = new Date().toISOString();
   const reqDoneId = randomUUID();
-  FeedbackRequestModel.insert({
+  await FeedbackRequestModel.insert({
     id: reqDoneId,
     from_user_id: emp,
     to_user_id: mgr,
@@ -22,7 +22,7 @@ export function seedDemoFeedback() {
     status: "COMPLETED",
     visibility: "with_managers",
   });
-  FeedbackEntryModel.insert({
+  await FeedbackEntryModel.insert({
     id: randomUUID(),
     request_id: reqDoneId,
     author_id: mgr,
@@ -30,7 +30,7 @@ export function seedDemoFeedback() {
       "You owned the narrative in the exec review. For next time, tighten the risks slide and invite Finance earlier—they felt looped in late.",
     created_at: now,
   });
-  FeedbackRequestModel.insert({
+  await FeedbackRequestModel.insert({
     id: randomUUID(),
     from_user_id: mgr,
     to_user_id: emp,

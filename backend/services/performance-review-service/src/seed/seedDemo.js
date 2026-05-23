@@ -3,12 +3,12 @@ import { logger } from "../utils/logger.js";
 import * as CycleModel from "../models/CycleModel.js";
 import * as ReviewModel from "../models/ReviewModel.js";
 
-export function seedIfEmpty() {
-  if (CycleModel.count() > 0) return;
+export async function seedIfEmpty() {
+  if ((await CycleModel.count()) > 0) return;
   const today = new Date();
   const start = today.toISOString().slice(0, 10);
   const end = new Date(today.getTime() + 365 * 86400000).toISOString().slice(0, 10);
-  CycleModel.insert({
+  await CycleModel.insert({
     name: "Annual performance cycle",
     start_date: start,
     end_date: end,
@@ -17,17 +17,17 @@ export function seedIfEmpty() {
   logger.info("Seeded default review cycle");
 }
 
-export function seedDemoReviews() {
+export async function seedDemoReviews() {
   const org = loadOrg();
   if (!org?.demoData) return;
   const emp = userIdByEmail(org, org.demoData.reviewEmployeeEmail || "liam.park@epfms.demo");
   const mgr = userIdByEmail(org, org.demoData.reviewManagerEmail || "maya.singh@epfms.demo");
   if (!emp || !mgr) return;
-  const cycles = CycleModel.findAll();
+  const cycles = await CycleModel.findAll();
   const cycle = cycles[0];
   if (!cycle) return;
-  if (ReviewModel.hasAnyForEmployee(emp)) return;
-  ReviewModel.insert({
+  if (await ReviewModel.hasAnyForEmployee(emp)) return;
+  await ReviewModel.insert({
     cycle_id: cycle.id,
     employee_id: emp,
     reviewer_id: mgr,

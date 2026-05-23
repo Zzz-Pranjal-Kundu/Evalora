@@ -22,7 +22,7 @@ export function RoleRoute({ roles, children }) {
     <Navigate
       to={ROUTES.HOME}
       replace
-      state={{ accessDenied: true, deniedPath: location.pathname }}
+      state={{ accessDenied: true }}
     />
   );
 }

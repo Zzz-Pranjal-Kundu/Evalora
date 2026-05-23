@@ -1,5 +1,4 @@
 import { NotificationModel } from "../models/NotificationModel.js";
-import { db } from "../db/database.js";
 import { logger } from "../utils/logger.js";
 import { loadOrgSeed } from "./loadOrgJson.js";
 
@@ -18,7 +17,7 @@ const TEMPLATES = [
   },
 ];
 
-export function seedDemoNotifications() {
+export async function seedDemoNotifications() {
   const org = loadOrgSeed();
   const emails = org?.demoData?.notificationsForEmails?.length
     ? org.demoData.notificationsForEmails
@@ -29,10 +28,10 @@ export function seedDemoNotifications() {
   for (const email of emails) {
     const userId = emailToId.get(email);
     if (!userId) continue;
-    const row = db.prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ?").get(userId);
-    if (row && row.c > 0) continue;
+    const list = await NotificationModel.listForUser(userId);
+    if (list.length > 0) continue;
     for (const it of TEMPLATES) {
-      NotificationModel.create({ userId, title: it.title, body: it.body });
+      await NotificationModel.create({ userId, title: it.title, body: it.body });
     }
     logger.info("Seeded demo notifications", { userId, email });
   }

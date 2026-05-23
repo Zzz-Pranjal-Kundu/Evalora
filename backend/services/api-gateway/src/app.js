@@ -7,6 +7,10 @@ import { env } from "./config/env.js";
 import gatewayRoutes from "./controllers/gatewayRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { swaggerSpec } from "./swagger.js";
+import { authenticateJWT } from "./middleware/requireAuth.js";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { requireRoleForPath } = require("./middleware/rbac");
 
 export function createApp() {
   const app = express();
@@ -32,6 +36,9 @@ export function createApp() {
   app.get("/health", (req, res) => {
     res.json({ status: "ok", service: "api-gateway" });
   });
+
+  app.use(authenticateJWT);
+  app.use(requireRoleForPath);
 
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
   app.use("/api/v1", gatewayRoutes);

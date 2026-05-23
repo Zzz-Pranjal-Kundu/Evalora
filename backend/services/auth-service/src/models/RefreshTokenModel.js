@@ -1,5 +1,5 @@
+import mongoose from "mongoose";
 import { createHmac, randomBytes, randomUUID } from "crypto";
-import { db } from "../db/database.js";
 import { env } from "../config/env.js";
 
 function hashToken(plain) {
@@ -15,39 +15,55 @@ function refreshTtlMs() {
   return n * mult;
 }
 
+const RefreshTokenSchema = new mongoose.Schema({
+  _id: { type: String, default: randomUUID },
+  user_id: { type: String, required: true },
+  token_hash: { type: String, required: true },
+  expires_at: { type: String, required: true },
+  created_at: { type: String, default: () => new Date().toISOString() }
+}, {
+  versionKey: false,
+  _id: false
+});
+
+const RefreshToken = mongoose.model("RefreshToken", RefreshTokenSchema, "refresh_tokens");
+
 export class RefreshTokenModel {
-  /**
-   * @returns {{ plain: string }}
-   */
-  static issue(userId) {
+  static async issue(userId) {
     const plain = randomBytes(40).toString("base64url");
     const id = randomUUID();
     const now = new Date().toISOString();
     const exp = new Date(Date.now() + refreshTtlMs()).toISOString();
-    db.prepare(
-      `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at)
-       VALUES (?, ?, ?, ?, ?)`
-    ).run(id, userId, hashToken(plain), exp, now);
+    
+    await RefreshToken.create({
+      _id: id,
+      user_id: userId,
+      token_hash: hashToken(plain),
+      expires_at: exp,
+      created_at: now
+    });
+    
     return { plain };
   }
 
-  static findValidUserId(plain) {
+  static async findValidUserId(plain) {
     if (!plain) return null;
     const h = hashToken(plain);
     const now = new Date().toISOString();
-    const row = db
-      .prepare(`SELECT user_id FROM refresh_tokens WHERE token_hash = ? AND expires_at > ?`)
-      .get(h, now);
+    const row = await RefreshToken.findOne({
+      token_hash: h,
+      expires_at: { $gt: now }
+    }).lean();
     return row?.user_id ?? null;
   }
 
-  static revokeByPlain(plain) {
+  static async revokeByPlain(plain) {
     if (!plain) return;
     const h = hashToken(plain);
-    db.prepare(`DELETE FROM refresh_tokens WHERE token_hash = ?`).run(h);
+    await RefreshToken.deleteOne({ token_hash: h });
   }
 
-  static revokeAllForUser(userId) {
-    db.prepare(`DELETE FROM refresh_tokens WHERE user_id = ?`).run(userId);
+  static async revokeAllForUser(userId) {
+    await RefreshToken.deleteMany({ user_id: userId });
   }
 }

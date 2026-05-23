@@ -21,15 +21,15 @@ function teamNameForUser(org, userId) {
 }
 
 /** Idempotent: creates profiles from backend/database/demo_org_seed.json when missing. */
-export function seedDemoProfiles() {
+export async function seedDemoProfiles() {
   const org = loadOrgSeed();
   if (!org?.users?.length) {
     return;
   }
   let added = 0;
   for (const row of org.users) {
-    if (ProfileModel.findByUserId(row.id)) continue;
-    ProfileModel.create({
+    if (await ProfileModel.findByUserId(row.id)) continue;
+    await ProfileModel.create({
       userId: row.id,
       fullName: fullNameFromSeedRow(row),
       department: row.department ?? null,

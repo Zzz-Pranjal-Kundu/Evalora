@@ -11,11 +11,8 @@ COPY docker/nginx.all-in-one.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
 RUN nginx -t
 
-# Production deps for each service
-RUN set -e; \
-  for svc in auth-service user-service notification-service api-gateway performance-review-service feedback-service analytics-service ai-insights-service; do \
-    cd /app/backend/services/$svc && npm ci --omit=dev; \
-  done
+# Install production dependencies for all workspaces at the monorepo root
+RUN npm ci --omit=dev
 
 # Frontend: same-origin API via nginx proxy
 RUN cd /app/frontend && npm ci && VITE_API_BASE_URL=/api npm run build

@@ -1,52 +1,81 @@
+import mongoose from "mongoose";
 import { randomUUID } from "crypto";
-import { db } from "../db/database.js";
 
-/**
- * Data access layer for users (MVC Model).
- */
+const UserSchema = new mongoose.Schema({
+  _id: { type: String, default: randomUUID },
+  email: { type: String, required: true, unique: true },
+  password_hash: { type: String, required: true },
+  role: { type: String, required: true },
+  created_at: { type: String, default: () => new Date().toISOString() },
+  updated_at: { type: String, default: () => new Date().toISOString() }
+}, {
+  versionKey: false,
+  _id: false // Disable auto ObjectId since we use custom string UUIDs
+});
+
+const User = mongoose.model("User", UserSchema, "users");
+
 export class UserModel {
-  static findByEmail(email) {
-    const row = db
-      .prepare("SELECT * FROM users WHERE email = ? COLLATE NOCASE")
-      .get(email);
-    return row ?? null;
+  static async findByEmail(email) {
+    if (!email) return null;
+    const doc = await User.findOne({ email: { $regex: new RegExp(`^${escapeRegExp(email)}$`, "i") } }).lean();
+    if (!doc) return null;
+    return { ...doc, id: doc._id };
   }
 
-  static findById(id) {
-    return db.prepare("SELECT * FROM users WHERE id = ?").get(id) ?? null;
+  static async findById(id) {
+    if (!id) return null;
+    const doc = await User.findById(id).lean();
+    if (!doc) return null;
+    return { ...doc, id: doc._id };
   }
 
-  static create({ email, passwordHash, role }) {
+  static async create({ email, passwordHash, role }) {
     const id = randomUUID();
     const now = new Date().toISOString();
-    db.prepare(
-      `INSERT INTO users (id, email, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, email, passwordHash, role, now, now);
+    const doc = await User.create({
+      _id: id,
+      email: email.trim().toLowerCase(),
+      password_hash: passwordHash,
+      role: role || "EMPLOYEE",
+      created_at: now,
+      updated_at: now
+    });
     return UserModel.findById(id);
   }
 
-  /** Used by demo seed so downstream SQLite services can reference fixed user IDs. */
-  static createWithId({ id, email, passwordHash, role }) {
+  static async createWithId({ id, email, passwordHash, role }) {
     const now = new Date().toISOString();
-    db.prepare(
-      `INSERT INTO users (id, email, password_hash, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(id, email, passwordHash, role, now, now);
+    const doc = await User.create({
+      _id: id,
+      email: email.trim().toLowerCase(),
+      password_hash: passwordHash,
+      role: role || "EMPLOYEE",
+      created_at: now,
+      updated_at: now
+    });
     return UserModel.findById(id);
   }
 
-  static updateRole(id, role) {
+  static async updateRole(id, role) {
     const now = new Date().toISOString();
-    const res = db
-      .prepare("UPDATE users SET role = ?, updated_at = ? WHERE id = ?")
-      .run(role, now, id);
-    return res.changes > 0 ? UserModel.findById(id) : null;
+    const doc = await User.findByIdAndUpdate(id, {
+      role,
+      updated_at: now
+    }, { new: true }).lean();
+    return doc ? UserModel.findById(id) : null;
   }
 
-  static updatePasswordHash(id, passwordHash) {
+  static async updatePasswordHash(id, passwordHash) {
     const now = new Date().toISOString();
-    db.prepare(`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`).run(passwordHash, now, id);
-    return UserModel.findById(id);
+    const doc = await User.findByIdAndUpdate(id, {
+      password_hash: passwordHash,
+      updated_at: now
+    }, { new: true }).lean();
+    return doc ? UserModel.findById(id) : null;
   }
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

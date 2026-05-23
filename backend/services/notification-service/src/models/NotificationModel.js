@@ -1,51 +1,66 @@
+import mongoose from "mongoose";
 import { randomUUID } from "crypto";
-import { db } from "../db/database.js";
+
+const NotificationSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  title: { type: String, required: true },
+  body: { type: String, required: true },
+  read: { type: Number, default: 0 },
+  created_at: { type: String, required: true }
+}, {
+  versionKey: false,
+  _id: false
+});
+
+const Notification = mongoose.model("Notification", NotificationSchema, "notifications");
 
 export class NotificationModel {
-  static create({ userId, title, body }) {
+  static async create({ userId, title, body }) {
     const id = randomUUID();
     const now = new Date().toISOString();
-    db.prepare(
-      `INSERT INTO notifications (id, user_id, title, body, read, created_at)
-       VALUES (?, ?, ?, ?, 0, ?)`
-    ).run(id, userId, title, body, now);
+    
+    await Notification.create({
+      _id: id,
+      user_id: userId,
+      title,
+      body,
+      read: 0,
+      created_at: now
+    });
+    
     return NotificationModel.findById(id);
   }
 
-  static findById(id) {
-    return db.prepare("SELECT * FROM notifications WHERE id = ?").get(id) ?? null;
+  static async findById(id) {
+    if (!id) return null;
+    const doc = await Notification.findById(id).lean();
+    if (!doc) return null;
+    return { ...doc, id: doc._id };
   }
 
-  static listForUser(userId, { limit = 50 } = {}) {
-    return db
-      .prepare(
-        `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`
-      )
-      .all(userId, limit);
+  static async listForUser(userId, { limit = 50 } = {}) {
+    if (!userId) return [];
+    const docs = await Notification.find({ user_id: userId }).sort({ created_at: -1 }).limit(limit).lean();
+    return docs.map(d => ({ ...d, id: d._id }));
   }
 
-  static markRead(id, userId) {
-    const res = db
-      .prepare(
-        `UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?`
-      )
-      .run(id, userId);
-    return res.changes > 0;
+  static async markRead(id, userId) {
+    const res = await Notification.updateOne({ _id: id, user_id: userId }, { $set: { read: 1 } });
+    return res.modifiedCount > 0;
   }
 
-  static markAllRead(userId) {
-    db.prepare(`UPDATE notifications SET read = 1 WHERE user_id = ?`).run(userId);
+  static async markAllRead(userId) {
+    await Notification.updateMany({ user_id: userId }, { $set: { read: 1 } });
   }
 
-  /** Marks unread rows whose title matches feedback-service notification titles. */
-  static markReadByTitles(userId, titles) {
+  static async markReadByTitles(userId, titles) {
     if (!titles?.length) return 0;
-    const placeholders = titles.map(() => "?").join(", ");
-    const res = db
-      .prepare(
-        `UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0 AND title IN (${placeholders})`
-      )
-      .run(userId, ...titles);
-    return Number(res.changes ?? 0);
+    const res = await Notification.updateMany({
+      user_id: userId,
+      read: 0,
+      title: { $in: titles }
+    }, { $set: { read: 1 } });
+    return res.modifiedCount;
   }
 }

@@ -1,282 +1,150 @@
-# Employee Performance & Feedback Management System (EPFMS)
+# Evalora: Employee Performance & Feedback Management System (EPFMS)
 
-Microservices capstone: **Node.js (Express)** for auth, users, notifications, the **API gateway**, performance reviews, feedback, analytics, and AI insight stubs. The **React (Vite)** SPA talks **only** to the API gateway.
-
-> **Dockerized stack:** one image (`Dockerfile` at repo root) runs every Node microservice plus nginx (built frontend). Compose (`docker-compose.yml`) starts a single container with SQLite data in volume `epfms_sqlite_data`. Optional Postgres-only compose remains under `backend/docker-compose.postgres.yml`.
-
-## Repository layout
-
-```
-├── backend/
-│   ├── database/migrations/       # PostgreSQL DDL (production target; V001 core schema)
-│   ├── data/                      # Default SQLite files (shared path from service env defaults)
-│   └── services/
-│       ├── api-gateway/           # Express: routing, JWT, rate limit, orchestrated register
-│       ├── auth-service/          # Express: signup/login, JWT, bcrypt, roles
-│       ├── user-service/          # Express: profiles, internal provisioning
-│       ├── notification-service/  # Express: in-app notifications + internal notify
-│       ├── performance-review-service/ # Express: cycles + reviews (+ optional notify fan-out)
-│       ├── feedback-service/      # Express: feedback requests + entries (+ analytics events)
-│       ├── analytics-service/     # Express: events ingestion + manager/admin dashboard
-│       └── ai-insights-service/   # Express: AI / NLP stubs (gateway proxies with X-Service-Key)
-├── docs/                          # Architecture, ER diagrams, sequences, problem statement
-├── docs/EPFMS_ROADMAP_AND_ASSUMPTIONS.md  # RBAC, AI service, Postgres, demo users, TODOs
-├── frontend/                      # React + Vite SPA (gateway-only API access)
-└── README.md
-```
-
-## Architecture (summary)
-
-See `docs/ARCHITECTURE.md` for the full text diagram, `docs/ER_DIAGRAMS.md` for schemas, `docs/SEQUENCE_FLOWS.md` for flows, and `docs/PROBLEM_DEFINITION.md` for Phase 1.
-
-## Ports
-
-| Component | Port |
-|-----------|------|
-| API Gateway | 8080 |
-| Auth Service | 3001 |
-| User Service | 3002 |
-| Notification Service | 3003 |
-| Performance Review | 8001 |
-| Feedback | 8002 |
-| Analytics | 8004 |
-| AI insights | 8005 |
-| PostgreSQL (optional compose) | 5432 |
-| React (Vite) | 5173 |
-| React (Docker + Nginx, all-in-one image) | 80 |
-
-## Docker quick start (full project)
-
-From the repository root:
-
-```powershell
-docker compose up --build
-```
-
-Then open **`http://localhost`** — the SPA is served on port **80**, and the browser calls **`/api`** on the same origin (proxied to the API gateway inside the container). Swagger UI is available at **`http://localhost/api-docs/`**.
-
-Direct gateway URL (optional): `http://localhost:8080/api`.
-
-Run in background:
-
-```powershell
-docker compose up -d --build
-```
-
-Stop:
-
-```powershell
-docker compose down
-```
-
-Stop + remove SQLite volume data:
-
-```powershell
-docker compose down -v
-```
-
-### API base paths
-
-- Preferred: **`http://localhost:8080/api/v1`** (set `VITE_API_BASE_URL` accordingly).
-- Legacy: `http://localhost:8080/api` remains mounted for backward compatibility.
-
-### AI service (local)
-
-```powershell
-cd backend\services\ai-insights-service
-npm install
-npm run start
-```
-
-Align **`AI_SERVICE_KEY`** in `backend/services/ai-insights-service/.env` (optional), **`backend/services/api-gateway/.env`**, and any future callers. Defaults match the gateway fallback (`epfms-local-ai-key-change-me`).
-
-### PostgreSQL (optional)
-
-```powershell
-docker compose -f backend/docker-compose.postgres.yml up -d
-psql postgresql://epfms:epfms@localhost:5432/epfms -f backend/database/migrations/V001__postgresql_core.sql
-```
-
-### Troubleshooting `npm run start:node`
-
-**`EADDRINUSE` … port 3001 (or 3002 / 3003 / 8080)**  
-An old Node process is still bound to that port (often from an earlier terminal). Close that terminal or kill the process:
-
-```powershell
-netstat -ano | findstr :3001
-```
-
-Note the **PID** in the last column, then:
-
-```powershell
-taskkill /PID <PID> /F
-```
-
-Repeat for `:3002`, `:3003`, `:8080` if needed.
-
-**`Cannot find package 'express'` (gateway) or missing `node_modules`**  
-Install deps for all Node services again from the repo root:
-
-```powershell
-npm run install:node-services
-```
-
-Or only one service, e.g. `npm install --prefix backend/services/user-service`.
-
-**Gateway tries to use port 3001 (`EADDRINUSE` with auth)**  
-`backend\services\api-gateway\.env` must **not** reuse the auth file. The gateway listens on **`GATEWAY_PORT`** (default **8080**). Copy from `backend\services\api-gateway\.env.example`, not from `auth-service`.
-
-## Shared secrets (local dev)
-
-Copy each service `.env.example` to `.env` and align these across **all** services:
-
-- `JWT_SECRET` — must match everywhere JWTs are verified.
-- `INTERNAL_SERVICE_KEY` — used by the gateway (user provisioning), notification `/internal/notify`, and analytics `/internal/events`.
-
-## Step-by-step local setup
-
-### 1) Prerequisites
-
-- Node.js **22.5 or newer** (required for built-in `node:sqlite` in the Node services; avoids native `better-sqlite3` builds and Visual Studio).
-- `npm`
-
-**Windows / corporate TLS:** If `npm install` still fails downloading packages, your IT team may need to trust the corporate root CA in Node, or use `npm config set strict-ssl false` only as a temporary diagnostic (not recommended long term).
-
-**PowerShell + npm:** If you see a prompt about `npm.ps1`, press **R** (Run once) or run `npm.cmd install` instead of `npm install`.
-
-**OneDrive locks:** If you see `EPERM` during `npm install`, close other programs using `node_modules` or move the repo to a non-synced folder (OneDrive sometimes locks files).
-
-### 2) One-command startup (recommended)
-
-From the **repository root**:
-
-```powershell
-npm install
-npm run install:node-services
-npm run install:frontend
-```
-
-Then start everything with:
-
-```powershell
-npm run start:backend   # all Node microservices (gateway + domain ports 8001–8002 and 8004–8005)
-npm run start:frontend  # frontend in one terminal
-```
-
-You can also run both from one terminal:
-
-```powershell
-npm run start:all
-```
-
-### Demo org (auto-seeded)
-
-`backend/database/demo_org_seed.json` defines a **small Acme Corp demo** (about ten people): two teams (Engineering, Customer Success), clear **manager lines**, and **`defaultPassword`** (`Demo12345!`) for every account unless you add a per-user `password`. The `about` field in the JSON explains which roles can **create formal performance reviews** (managers, HR, leadership, super admin) versus **employees**, who primarily **view** their own review record and use feedback where the UI allows.
-
-On each **auth-service** startup, demo accounts from the JSON are **synced**: missing emails are inserted; rows whose **id** matches the JSON get password and role refreshed from the file (so `demo_org_seed.json` stays the source of truth). If an email is already used by a **different** user id (e.g. self‑registered), that JSON row is skipped and logged.
-
-Quick logins (all use `defaultPassword` unless you add a `password` field on a user in the JSON):
-
-| Email | Role | Notes |
-|--------|------|--------|
-| `ops.admin@epfms.demo` | SUPER_ADMIN | Full admin surface |
-| `dana.lead@epfms.demo` | LEADERSHIP | Exec; can manage formal reviews |
-| `hr.pat@epfms.demo` | HR_ADMIN | People ops; can manage formal reviews |
-| `maya.singh@epfms.demo` | MANAGER | Eng director; seeds sample review as manager |
-| `jordan.cs@epfms.demo` | MANAGER | CS director |
-| `liam.park@epfms.demo` | EMPLOYEE | Seeds as review subject (IC) |
-| `nora.wu@epfms.demo`, `ava.lee@epfms.demo` | EMPLOYEE | Engineering ICs |
-| `sam.rivera@epfms.demo`, `taylor.brook@epfms.demo` | EMPLOYEE | CS ICs |
-
-Password for all rows above: **`Demo12345!`** (set in `defaultPassword` in the JSON).
-
-User-service seeds **profiles** (including `team`); notification-service seeds **in-app notifications** for selected emails in `demoData`; performance, feedback, and analytics services attach **reviews, threads, and events** using `demoData` email references in the same JSON.
-
-To re-seed from scratch, stop services and delete the SQLite files under `backend/data/` (or paths in each service `.env`), then start again. Edit `backend/database/demo_org_seed.json` to change hierarchy or add people.
-
-Watch mode:
-
-```powershell
-npm run dev:backend
-npm run start:frontend
-```
-
-Also copy each service’s `.env.example` → `.env` and keep shared secrets aligned (`JWT_SECRET`, `INTERNAL_SERVICE_KEY`, `AI_SERVICE_KEY`).
+Evalora is a modern, enterprise-grade Microservices Performance & Feedback platform designed for modern corporate organizations. Built with a high-performance **React + Vite** frontend SPA and **7 Node.js (Express) backend microservices**, the entire architecture communicates through a unified **API Gateway** acting as the primary security boundary.
 
 ---
 
-### 3) Node services — separate terminals (optional)
+## 🌟 Architectural Overview
 
-<details>
-<summary>Per-service commands</summary>
+1. **MongoDB Atlas Integration**: The backend has been migrated from local SQLite files to a secure cloud database hosted on **MongoDB Atlas** using **Mongoose** connection drivers.
+2. **Unified MonoRepo Workspace System**: Uses npm workspaces (`package.json`) to manage global packages and microservices, including a centralized shared package (`@epfms/database`) for Mongoose schema definitions.
+3. **Robust RBAC Security Boundaries**:
+   * **Consolidated Frontend guards**: Consolidated RBAC guards inside `frontend/src/config/rbac.js` for role checking, with JSDoc-deprecated legacy `ADMIN` warnings.
+   * **Route Redirection Security**: Stripped `deniedPath` from route navigation state in React Router to prevent cross-site history leaks.
+   * **Gateway Access Control**: Authoritative path authorization Express middleware inside the API Gateway enforcing strict permission checks before proxying requests downstream.
+4. **All-in-One Production Containerization**: Uses a modular `Dockerfile` executing Nginx (serving the static React build on port 80) and Supervisor (running all Express microservices concurrently) as a single, lightweight container. **Perfect for deploying 100% free on Render or Koyeb!**
 
+---
+
+## 📁 Repository Structure
+
+```text
+├── backend/
+│   ├── packages/
+│   │   └── database/              # Centralized Mongoose seeding suite (seed.js + JSON raw data)
+│   └── services/
+│       ├── api-gateway/           # Node Express: API entrypoint, global JWT & RBAC verification middleware
+│       ├── auth-service/          # Node Express: signup/login, token hashes, role management
+│       ├── user-service/          # Node Express: employee profiles, public kudos & recognition feeds
+│       ├── notification-service/  # Node Express: real-time alert logs & automated notifications
+│       ├── performance-review-service/ # Node Express: review cycle generation, manager evaluations
+│       ├── feedback-service/      # Node Express: peer-to-peer 360 feedback requests & submissions
+│       ├── analytics-service/     # Node Express: event telemetry logging & chart aggregates
+│       └── ai-insights-service/   # Node Express: NLP stubs for performance summaries
+├── docs/                          # Architecture maps, database diagrams, sequence charts
+├── frontend/                      # React + Vite Premium Single Page Application (only talks to API Gateway)
+├── Dockerfile                     # Unified multi-service + Nginx production builder
+└── README.md                      # Comprehensive developer handbook
+```
+
+---
+
+## 🖥️ System Port Allocations
+
+| Service / Component | Protocol / Port | Purpose |
+| :--- | :--- | :--- |
+| **Public Entrance (Nginx)** | `HTTP / 80` | Serves compiled React assets + proxies `/api/*` requests |
+| **API Gateway** | `HTTP / 8080` | Orchestrates global traffic & runs JWT/RBAC middleware |
+| **Auth Service** | `HTTP / 3001` | Processes JWT generation, refresh cycles, & registrations |
+| **User Service** | `HTTP / 3002` | Manages profiles, department org charts, & recognition boards |
+| **Notification Service** | `HTTP / 3003` | Houses real-time system alert feeds |
+| **Performance Review** | `HTTP / 8001` | Evaluates employee ratings, draft reviews, & formal submissions |
+| **Feedback Service** | `HTTP / 8002` | Manages peer 360-degree questionnaire threads |
+| **Analytics Service** | `HTTP / 8004` | Tracks system telemetry, logins, & performance distributions |
+| **AI Insights Service** | `HTTP / 8005` | Generates advanced summary analysis for manager dashboards |
+| **React Development** | `HTTP / 5173` | Local Vite HMR development server |
+
+---
+
+## 👥 Seeded Demo Organization Accounts
+
+Your cloud MongoDB Atlas database is pre-seeded with a comprehensive corporate catalog containing reporting lines, evaluation cycles, reviews, and event telemetry.
+
+All accounts use the unified password: **`Demo12345!`**
+
+| Email Profile | Assigned Role | Platform Scopes & Dashboard Features |
+| :--- | :--- | :--- |
+| **`ops.admin@epfms.demo`** | `SUPER_ADMIN` | Root level access. Can manage configurations, view system telemetry, and inspect logs. |
+| **`dana.lead@epfms.demo`** | `LEADERSHIP` | Executive dashboard. Access to company-wide performance stats, global calibration grids, and strategic goals. |
+| **`hr.pat@epfms.demo`** | `HR_ADMIN` | People Operations dashboard. Can create performance cycles, review calibration curves, and manage organizational trees. |
+| **`maya.singh@epfms.demo`** | `MANAGER` | Manager workspace. Views direct report profiles, writes performance appraisals, and manages peer review cycles. |
+| **`jordan.cs@epfms.demo`** | `MANAGER` | Customer Success Team Manager workspace. Handles direct reports and approves peer feedback threads. |
+| **`liam.park@epfms.demo`** | `EMPLOYEE` | Individual Contributor interface. Submits self-evaluations, sends public kudos (Kudos board), and answers peer feedback. |
+| **`nora.wu@epfms.demo`** | `EMPLOYEE` | Engineering team member. Features feedback submission and self-appraisal cycles. |
+| **`ava.lee@epfms.demo`** | `EMPLOYEE` | Frontend Engineer. Active participant in team recognition boards and appraisal schedules. |
+
+---
+
+## 🚀 Step-by-Step Local Workspace Setup
+
+### 1. Prerequisites
+* **Node.js**: Version `22.5.0` or newer.
+* **NPM**: Version `10.0.0` or newer.
+* **MongoDB**: A running cloud MongoDB Atlas cluster (a secure connection is pre-configured for instant live operation!).
+
+### 2. Dependency Installation
+Execute this from the **repository root** to download dependencies for the workspaces and compile frontend assets:
 ```powershell
-cd backend\services\auth-service
-copy .env.example .env
+# Install root workspaces dependencies
 npm install
-npm run start
+
+# Install individual packages and microservices dependencies
+npm run install:node-services
+
+# Install React frontend dependencies
+npm run install:frontend
 ```
 
+### 3. Populating the Cloud Database (Seeding)
+To reset and seed your database natively with our Mongoose-based rich dataset, run the seeder:
 ```powershell
-cd backend\services\user-service
-copy .env.example .env
-npm install
-npm run start
+cd backend/packages/database
+node seed.js
+cd ../../..
 ```
 
+### 4. Running the Entire Application Locally
+Start the React frontend development server and all 8 backend microservices concurrently from one terminal:
 ```powershell
-cd backend\services\notification-service
-copy .env.example .env
-npm install
-npm run start
+npm run start:all
 ```
+* **Frontend**: `http://localhost:5173`
+* **API Gateway**: `http://localhost:8080/api/v1`
+* **Swagger API Documentation**: `http://localhost:8080/api-docs`
 
+---
+
+## ☁️ Continuous Production Cloud Deployment (Free Tier)
+
+Since Evalora features a production-ready **Nginx + Supervisor all-in-one Docker configuration**, you can deploy the entire stack completely for free on **Render** without requiring multiple paid hosting servers:
+
+1. **GitHub Commit**: Commit your changes and push them to your repository:
+   ```powershell
+   git add .
+   git commit -m "feat: complete Mongoose cloud migration and RBAC security fixes"
+   git push origin main
+   ```
+2. **Setup on Render**:
+   * Create a free account at [render.com](https://render.com/).
+   * Click **New** -> **Web Service** -> Link your GitHub repository.
+   * **Language**: Select **Docker** (Render will automatically compile both your frontend assets and backend microservices under the root `Dockerfile`).
+   * **Instance Type**: Choose **Free** ($0/month, 512MB RAM).
+   * **Environment Variables**: Add a new environment variable:
+     * **Key**: `MONGODB_URI`
+     * **Value**: *Your MongoDB Atlas cluster URI*
+3. **Deploy!**: Click **Create Web Service**. Your live production URL will be ready in under 5 minutes!
+
+---
+
+## 🧪 Running Test Suites
+
+Execute integration and security assertion tests inside each package:
 ```powershell
-cd backend\services\api-gateway
-copy .env.example .env
-npm install
-npm run start
+# Verify API Gateway security rules & path routing
+cd backend/services/api-gateway
+npm test
+
+# Verify Authentication claims
+cd ../auth-service
+npm test
 ```
-
-</details>
-
-### 4) Domain services (Node, ports 8001–8002 and 8004–8005)
-
-From the repo root, `npm run install:node-services` installs gateway + all domain services. For a single service:
-
-```powershell
-cd backend\services\performance-review-service
-npm install
-npm run dev
-```
-
-Repeat for `feedback-service`, `analytics-service`, and `ai-insights-service` (see ports table). Or run everything with **`npm run dev:backend`** (all Node microservices including 8001–8002 and 8004–8005).
-
-### 5) Frontend (manual, optional)
-
-```powershell
-cd frontend
-copy .env.example .env
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`. Register a user (optionally as **HR_ADMIN** or **SUPER_ADMIN**), sign in, and exercise flows through the gateway (`http://localhost:8080/api/v1`).
-
-## API documentation
-
-- Node services: `http://localhost:3001/api-docs` (auth), `3002/api-docs`, `3003/api-docs`, `8080/api-docs` (gateway). Domain APIs (8001–8002, 8004–8005) are JSON-only; use the gateway (`/api/performance`, `/api/feedback`, etc.) for Swagger-backed docs where exposed.
-
-## Tests
-
-```powershell
-cd backend\services\auth-service; npm test
-cd backend\services\api-gateway; npm test
-cd backend\services\performance-review-service; npm test
-```
-
-## Docker notes
-
-- **One `Dockerfile`** at the repository root: builds all services, runs them with **supervisord**, and serves the Vite app with **nginx** (see `docker/nginx.all-in-one.conf` and `docker/supervisord.conf`).
-- **Compose** starts a single service `epfms` that maps ports **80** (UI + `/api` proxy), **8080** (gateway), and each backend port for debugging.
-- Optional PostgreSQL only: `backend/docker-compose.postgres.yml` (for migration/testing flows).

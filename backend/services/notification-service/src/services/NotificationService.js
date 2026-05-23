@@ -10,20 +10,21 @@ export const FEEDBACK_NOTIFICATION_TITLES = [
 ];
 
 export class NotificationService {
-  static createInternal({ userId, title, body }) {
+  static async createInternal({ userId, title, body }) {
     const uid = String(userId ?? "").trim();
-    const row = NotificationModel.create({ userId: uid, title, body });
+    const row = await NotificationModel.create({ userId: uid, title, body });
     return notificationFromRow(row);
   }
 
-  static listMine(userId) {
+  static async listMine(userId) {
     const uid = String(userId ?? "").trim();
-    return NotificationModel.listForUser(uid).map(notificationFromRow);
+    const list = await NotificationModel.listForUser(uid);
+    return list.map(notificationFromRow);
   }
 
-  static markRead(userId, id) {
+  static async markRead(userId, id) {
     const uid = String(userId ?? "").trim();
-    const ok = NotificationModel.markRead(id, uid);
+    const ok = await NotificationModel.markRead(id, uid);
     if (!ok) {
       const err = new Error("Not found");
       err.statusCode = 404;
@@ -32,15 +33,15 @@ export class NotificationService {
     return { success: true };
   }
 
-  static markAllRead(userId) {
+  static async markAllRead(userId) {
     const uid = String(userId ?? "").trim();
-    NotificationModel.markAllRead(uid);
+    await NotificationModel.markAllRead(uid);
     return { success: true };
   }
 
-  static markFeedbackRelatedRead(userId) {
+  static async markFeedbackRelatedRead(userId) {
     const uid = String(userId ?? "").trim();
-    const updated = NotificationModel.markReadByTitles(uid, FEEDBACK_NOTIFICATION_TITLES);
+    const updated = await NotificationModel.markReadByTitles(uid, FEEDBACK_NOTIFICATION_TITLES);
     return { success: true, updated };
   }
 }

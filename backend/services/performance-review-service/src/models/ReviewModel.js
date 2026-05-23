@@ -1,32 +1,60 @@
+import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
-import { db } from "../db/database.js";
 
-export function findAll() {
-  return db.prepare("SELECT * FROM reviews ORDER BY created_at DESC").all();
+const ReviewSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  cycle_id: { type: String, required: true },
+  employee_id: { type: String, required: true },
+  reviewer_id: { type: String, required: true },
+  status: { type: String, required: true },
+  rating: { type: Number, default: 0 },
+  summary: { type: String, default: "" },
+  visibility: { type: String, default: "participants_only" },
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true }
+}, {
+  versionKey: false,
+  _id: false
+});
+
+const Review = mongoose.model("Review", ReviewSchema, "reviews");
+
+export async function findAll() {
+  const docs = await Review.find({}).sort({ created_at: -1 }).lean();
+  return docs.map(d => ({ ...d, id: d._id }));
 }
 
-export function findForReviewerOrEmployee(userId) {
-  return db
-    .prepare(
-      `SELECT * FROM reviews WHERE reviewer_id = ? OR employee_id = ?
-       ORDER BY created_at DESC`
-    )
-    .all(userId, userId);
+export async function findForReviewerOrEmployee(userId) {
+  if (!userId) return [];
+  const docs = await Review.find({
+    $or: [
+      { reviewer_id: userId },
+      { employee_id: userId }
+    ]
+  }).sort({ created_at: -1 }).lean();
+  return docs.map(d => ({ ...d, id: d._id }));
 }
 
-export function findForEmployee(userId) {
-  return db.prepare("SELECT * FROM reviews WHERE employee_id = ? ORDER BY created_at DESC").all(userId);
+export async function findForEmployee(userId) {
+  if (!userId) return [];
+  const docs = await Review.find({ employee_id: userId }).sort({ created_at: -1 }).lean();
+  return docs.map(d => ({ ...d, id: d._id }));
 }
 
-export function findById(reviewId) {
-  return db.prepare("SELECT * FROM reviews WHERE id = ?").get(reviewId);
+export async function findById(reviewId) {
+  if (!reviewId) return null;
+  const doc = await Review.findById(reviewId).lean();
+  if (!doc) return null;
+  return { ...doc, id: doc._id };
 }
 
-export function hasAnyForEmployee(employeeId) {
-  return !!db.prepare("SELECT id FROM reviews WHERE employee_id = ? LIMIT 1").get(employeeId);
+export async function hasAnyForEmployee(employeeId) {
+  if (!employeeId) return false;
+  const count = await Review.countDocuments({ employee_id: employeeId });
+  return count > 0;
 }
 
-export function insert({
+export async function insert({
   cycle_id,
   employee_id,
   reviewer_id,
@@ -37,24 +65,35 @@ export function insert({
 }) {
   const now = new Date().toISOString();
   const id = randomUUID();
-  db.prepare(
-    `INSERT INTO reviews (id, cycle_id, employee_id, reviewer_id, status, rating, summary, visibility, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(id, cycle_id, employee_id, reviewer_id, status, rating, summary, visibility, now, now);
-  return findById(id);
-}
-
-export function updateFields(reviewId, { status, rating, summary, visibility, updated_at }) {
-  const prev = findById(reviewId);
-  if (!prev) return null;
-  const vis = visibility !== undefined ? visibility : prev.visibility || "participants_only";
-  db.prepare(`UPDATE reviews SET status = ?, rating = ?, summary = ?, visibility = ?, updated_at = ? WHERE id = ?`).run(
+  await Review.create({
+    _id: id,
+    cycle_id,
+    employee_id,
+    reviewer_id,
     status,
     rating,
     summary,
-    vis,
-    updated_at,
-    reviewId
-  );
+    visibility,
+    created_at: now,
+    updated_at: now
+  });
+  return findById(id);
+}
+
+export async function updateFields(reviewId, { status, rating, summary, visibility, updated_at }) {
+  const prev = await findById(reviewId);
+  if (!prev) return null;
+  
+  const vis = visibility !== undefined ? visibility : prev.visibility || "participants_only";
+  const upDate = updated_at || new Date().toISOString();
+  
+  const updates = {};
+  if (status !== undefined) updates.status = status;
+  if (rating !== undefined) updates.rating = rating;
+  if (summary !== undefined) updates.summary = summary;
+  if (vis !== undefined) updates.visibility = vis;
+  updates.updated_at = upDate;
+  
+  await Review.findByIdAndUpdate(reviewId, { $set: updates });
   return findById(reviewId);
 }

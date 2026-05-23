@@ -259,23 +259,19 @@ export default function Dashboard() {
       <>
         {/* Welcome Section */}
         <div className="dash-hero-grid">
-          <div className="dash-welcome" style={{ background: "linear-gradient(135deg, var(--color-primary-dark, #061178) 0%, var(--color-primary, #1677ff) 100%)", color: "#fff" }}>
+          <div className="dash-welcome" style={{ background: "linear-gradient(135deg, #5c836c 0%, #3d6d50 100%)", color: "#fff", borderRadius: "var(--radius)", padding: "2rem", display: "flex", justifyContent: "space-between", gap: "1.5rem" }}>
             <div className="dash-welcome__body">
-              <h1 className="dash-welcome__title" style={{ color: "#fff" }}>Welcome to HR Operations, {displayName} 🏢</h1>
-              <p className="dash-welcome__lead" style={{ opacity: 0.95 }}>{EPFMS_TAGLINE}</p>
-              <p style={{ margin: "0 0 1.2rem", fontSize: "0.9rem", opacity: 0.85 }}>
-                {roleHomeSubtitle(role)}
+              <h1 className="dash-welcome__title" style={{ color: "#fff", fontFamily: "var(--font-serif)", fontSize: "2rem", marginBottom: "0.5rem" }}>Welcome back, {displayName}.</h1>
+              <p className="dash-welcome__lead" style={{ opacity: 0.95, fontSize: "1.05rem", lineHeight: 1.5, margin: "0 0 1.2rem" }}>
+                The talent ecosystem is thriving today. You have new reviews to calibrate and fresh sentiment reports waiting for your analysis.
               </p>
-              <div className="dash-welcome__chips">
-                <span className="dash-welcome__chip" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                  <span className="topbar__chip-dot topbar__chip-dot--live" style={{ marginRight: 4, background: "#52c41a" }} />
-                  Program Status: Synchronized
-                </span>
-                <span className="dash-welcome__chip" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>Scope: Company Administrator</span>
-              </div>
+              <Link to="/hr" className="btn btn-secondary" style={{ background: "#2D3E33", color: "#fff", border: "none", borderRadius: "999px", padding: "0.6rem 1.4rem", display: "inline-flex", alignItems: "center", gap: "0.5rem", textDecoration: "none" }}>
+                View Daily Summary →
+              </Link>
             </div>
-            <div className="dash-welcome__art" aria-hidden>
-              <Building2 size={80} style={{ opacity: 0.2, color: "#fff" }} />
+            <div className="dash-welcome__art" style={{ background: "rgba(255,255,255,0.08)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)", width: "160px", flexShrink: 0, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <Building2 size={48} style={{ color: "#fff", opacity: 0.95 }} />
+              <div style={{ fontSize: "0.75rem", color: "#fff", fontWeight: "bold", marginTop: "0.5rem", letterSpacing: "0.05em" }}>HR HUB LIVE</div>
             </div>
           </div>
 
@@ -460,23 +456,19 @@ export default function Dashboard() {
       <>
         {/* Welcome Section */}
         <div className="dash-hero-grid">
-          <div className="dash-welcome" style={{ background: "linear-gradient(135deg, #125738 0%, #17b978 100%)", color: "#fff" }}>
+          <div className="dash-welcome" style={{ background: "linear-gradient(135deg, #5c836c 0%, #3d6d50 100%)", color: "#fff", borderRadius: "var(--radius)", padding: "2rem", display: "flex", justifyContent: "space-between", gap: "1.5rem" }}>
             <div className="dash-welcome__body">
-              <h1 className="dash-welcome__title" style={{ color: "#fff" }}>Manager Workspace, {displayName} 👨‍💼</h1>
-              <p className="dash-welcome__lead" style={{ opacity: 0.95 }}>{EPFMS_TAGLINE}</p>
-              <p style={{ margin: "0 0 1.2rem", fontSize: "0.9rem", opacity: 0.85 }}>
-                {roleHomeSubtitle(role)}
+              <h1 className="dash-welcome__title" style={{ color: "#fff", fontFamily: "var(--font-serif)", fontSize: "2rem", marginBottom: "0.5rem" }}>Welcome back, {displayName}.</h1>
+              <p className="dash-welcome__lead" style={{ opacity: 0.95, fontSize: "1.05rem", lineHeight: 1.5, margin: "0 0 1.2rem" }}>
+                The talent ecosystem is thriving today. You have new reviews to calibrate and fresh sentiment reports waiting for your analysis.
               </p>
-              <div className="dash-welcome__chips">
-                <span className="dash-welcome__chip" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                  <span className="topbar__chip-dot topbar__chip-dot--live" style={{ marginRight: 4, background: "#52c41a" }} />
-                  Direct Reports: {orgSnapshot.directReports.length}
-                </span>
-                <span className="dash-welcome__chip" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>Role: People Leader</span>
-              </div>
+              <Link to="/reviews" className="btn btn-secondary" style={{ background: "#2D3E33", color: "#fff", border: "none", borderRadius: "999px", padding: "0.6rem 1.4rem", display: "inline-flex", alignItems: "center", gap: "0.5rem", textDecoration: "none" }}>
+                View Daily Summary →
+              </Link>
             </div>
-            <div className="dash-welcome__art" aria-hidden>
-              <Users size={80} style={{ opacity: 0.2, color: "#fff" }} />
+            <div className="dash-welcome__art" style={{ background: "rgba(255,255,255,0.08)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)", width: "160px", flexShrink: 0, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <Users size={48} style={{ color: "#fff", opacity: 0.95 }} />
+              <div style={{ fontSize: "0.75rem", color: "#fff", fontWeight: "bold", marginTop: "0.5rem", letterSpacing: "0.05em" }}>TEAM LEAD LIVE</div>
             </div>
           </div>
 
@@ -676,23 +668,19 @@ export default function Dashboard() {
       <>
         {/* Welcome Section */}
         <div className="dash-hero-grid">
-          <div className="dash-welcome" style={{ background: "linear-gradient(135deg, var(--color-primary-dark, #5956e9) 0%, var(--color-accent, #9e5ced) 100%)", color: "#fff" }}>
+          <div className="dash-welcome" style={{ background: "linear-gradient(135deg, #5c836c 0%, #3d6d50 100%)", color: "#fff", borderRadius: "var(--radius)", padding: "2rem", display: "flex", justifyContent: "space-between", gap: "1.5rem" }}>
             <div className="dash-welcome__body">
-              <h1 className="dash-welcome__title" style={{ color: "#fff" }}>Welcome to your Portal, {displayName} 👋</h1>
-              <p className="dash-welcome__lead" style={{ opacity: 0.95 }}>{EPFMS_TAGLINE}</p>
-              <p style={{ margin: "0 0 1.2rem", fontSize: "0.9rem", opacity: 0.85 }}>
-                {roleHomeSubtitle(role)}
+              <h1 className="dash-welcome__title" style={{ color: "#fff", fontFamily: "var(--font-serif)", fontSize: "2rem", marginBottom: "0.5rem" }}>Welcome back, {displayName}.</h1>
+              <p className="dash-welcome__lead" style={{ opacity: 0.95, fontSize: "1.05rem", lineHeight: 1.5, margin: "0 0 1.2rem" }}>
+                The talent ecosystem is thriving today. You have new reviews to calibrate and fresh sentiment reports waiting for your analysis.
               </p>
-              <div className="dash-welcome__chips">
-                <span className="dash-welcome__chip" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
-                  <span className="topbar__chip-dot topbar__chip-dot--live" style={{ marginRight: 4, background: "#52c41a" }} />
-                  Cycle: Active
-                </span>
-                <span className="dash-welcome__chip" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>Role: Employee Portal</span>
-              </div>
+              <Link to="/feedback" className="btn btn-secondary" style={{ background: "#2D3E33", color: "#fff", border: "none", borderRadius: "999px", padding: "0.6rem 1.4rem", display: "inline-flex", alignItems: "center", gap: "0.5rem", textDecoration: "none" }}>
+                View Daily Summary →
+              </Link>
             </div>
-            <div className="dash-welcome__art" aria-hidden>
-              <Award size={80} style={{ opacity: 0.2, color: "#fff" }} />
+            <div className="dash-welcome__art" style={{ background: "rgba(255,255,255,0.08)", padding: "1.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.15)", width: "160px", flexShrink: 0, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <Award size={48} style={{ color: "#fff", opacity: 0.95 }} />
+              <div style={{ fontSize: "0.75rem", color: "#fff", fontWeight: "bold", marginTop: "0.5rem", letterSpacing: "0.05em" }}>PORTAL ACTIVE</div>
             </div>
           </div>
 

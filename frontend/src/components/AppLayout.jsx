@@ -142,7 +142,8 @@ export function AppLayout() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <p className="sidebar__brand">EPFMS</p>
+        <p className="sidebar__brand">InsightFlow</p>
+        <span className="sidebar__tagline">Employee Growth</span>
         <div className="sidebar__user">
           <div className="sidebar__avatar" aria-hidden>
             {initials}
@@ -251,6 +252,21 @@ export function AppLayout() {
             </NavLink>
           )}
         </nav>
+        <Link 
+          to="/feedback" 
+          className="btn btn-primary"
+          style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            gap: "0.5rem", 
+            margin: "1rem 0.35rem 0", 
+            borderRadius: "999px" 
+          }}
+        >
+          <MessageSquareText size={16} />
+          + New Feedback
+        </Link>
         <div className="sidebar__logout">
           <button
             type="button"

@@ -148,3 +148,6 @@ npm test
 cd ../auth-service
 npm test
 ```
+
+
+Made with <3 by ZzzPranjalKunduzzZ :)

@@ -142,7 +142,8 @@ function getEnvDatabaseUrl() {
       }
     }
   }
-  return "mongodb+srv://evaloraDB:GA75VaixhPv7Fhfm@cluster0.xuguph2.mongodb.net/epfms?retryWrites=true&w=majority&appName=Cluster0";
+  console.warn("⚠️ MONGODB_URI not found in process.env or .env file. Defaulting to local MongoDB: mongodb://127.0.0.1:27017/epfms");
+  return "mongodb://127.0.0.1:27017/epfms";
 }
 
 async function main() {

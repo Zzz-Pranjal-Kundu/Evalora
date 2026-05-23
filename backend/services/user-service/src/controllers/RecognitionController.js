@@ -2,9 +2,9 @@ import { validationResult } from "express-validator";
 import { RecognitionService } from "../services/RecognitionService.js";
 
 export class RecognitionController {
-  static listFeed(req, res, next) {
+  static async listFeed(req, res, next) {
     try {
-      const rows = RecognitionService.listFeedForViewer(req.user.id, req.user.roles || []);
+      const rows = await RecognitionService.listFeedForViewer(req.user.id, req.user.roles || []);
       return res.json(rows);
     } catch (e) {
       next(e);

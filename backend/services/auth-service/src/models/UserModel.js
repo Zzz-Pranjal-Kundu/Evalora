@@ -1,111 +1,81 @@
-import { db } from "../db/database.js";
+import mongoose from "mongoose";
+import { randomUUID } from "crypto";
 
-/**
- * Data access layer for users (MVC Model).
- */
+const UserSchema = new mongoose.Schema({
+  _id: { type: String, default: randomUUID },
+  email: { type: String, required: true, unique: true },
+  password_hash: { type: String, required: true },
+  role: { type: String, required: true },
+  created_at: { type: String, default: () => new Date().toISOString() },
+  updated_at: { type: String, default: () => new Date().toISOString() }
+}, {
+  versionKey: false,
+  _id: false // Disable auto ObjectId since we use custom string UUIDs
+});
+
+const User = mongoose.model("User", UserSchema, "users");
+
 export class UserModel {
   static async findByEmail(email) {
     if (!email) return null;
-    const user = await db.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
-      include: {
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
-      }
-    });
-    if (!user) return null;
-    return {
-      ...user,
-      password_hash: user.passwordHash,
-      role: user.userRoles[0]?.role?.code || 'EMPLOYEE',
-      created_at: user.createdAt.toISOString(),
-      updated_at: user.updatedAt.toISOString()
-    };
+    const doc = await User.findOne({ email: { $regex: new RegExp(`^${escapeRegExp(email)}$`, "i") } }).lean();
+    if (!doc) return null;
+    return { ...doc, id: doc._id };
   }
 
   static async findById(id) {
     if (!id) return null;
-    const user = await db.user.findUnique({
-      where: { id },
-      include: {
-        userRoles: {
-          include: {
-            role: true
-          }
-        }
-      }
-    });
-    if (!user) return null;
-    return {
-      ...user,
-      password_hash: user.passwordHash,
-      role: user.userRoles[0]?.role?.code || 'EMPLOYEE',
-      created_at: user.createdAt.toISOString(),
-      updated_at: user.updatedAt.toISOString()
-    };
+    const doc = await User.findById(id).lean();
+    if (!doc) return null;
+    return { ...doc, id: doc._id };
   }
 
   static async create({ email, passwordHash, role }) {
-    let dbRole = await db.role.findUnique({ where: { code: role } });
-    if (!dbRole) {
-      dbRole = await db.role.findFirst({ where: { code: 'EMPLOYEE' } });
-    }
-    const user = await db.user.create({
-      data: {
-        email,
-        passwordHash,
-        userRoles: {
-          create: {
-            roleId: dbRole.id
-          }
-        }
-      }
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const doc = await User.create({
+      _id: id,
+      email: email.trim().toLowerCase(),
+      password_hash: passwordHash,
+      role: role || "EMPLOYEE",
+      created_at: now,
+      updated_at: now
     });
-    return UserModel.findById(user.id);
+    return UserModel.findById(id);
   }
 
-  /** Used by demo seed so downstream SQLite services can reference fixed user IDs. */
   static async createWithId({ id, email, passwordHash, role }) {
-    let dbRole = await db.role.findUnique({ where: { code: role } });
-    if (!dbRole) {
-      dbRole = await db.role.findFirst({ where: { code: 'EMPLOYEE' } });
-    }
-    const user = await db.user.create({
-      data: {
-        id,
-        email,
-        passwordHash,
-        userRoles: {
-          create: {
-            roleId: dbRole.id
-          }
-        }
-      }
+    const now = new Date().toISOString();
+    const doc = await User.create({
+      _id: id,
+      email: email.trim().toLowerCase(),
+      password_hash: passwordHash,
+      role: role || "EMPLOYEE",
+      created_at: now,
+      updated_at: now
     });
-    return UserModel.findById(user.id);
+    return UserModel.findById(id);
   }
 
   static async updateRole(id, role) {
-    const dbRole = await db.role.findUnique({ where: { code: role } });
-    if (!dbRole) return null;
-    await db.userRole.deleteMany({ where: { userId: id } });
-    await db.userRole.create({
-      data: {
-        userId: id,
-        roleId: dbRole.id
-      }
-    });
-    return UserModel.findById(id);
+    const now = new Date().toISOString();
+    const doc = await User.findByIdAndUpdate(id, {
+      role,
+      updated_at: now
+    }, { new: true }).lean();
+    return doc ? UserModel.findById(id) : null;
   }
 
   static async updatePasswordHash(id, passwordHash) {
-    await db.user.update({
-      where: { id },
-      data: { passwordHash, updatedAt: new Date() }
-    });
-    return UserModel.findById(id);
+    const now = new Date().toISOString();
+    const doc = await User.findByIdAndUpdate(id, {
+      password_hash: passwordHash,
+      updated_at: now
+    }, { new: true }).lean();
+    return doc ? UserModel.findById(id) : null;
   }
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

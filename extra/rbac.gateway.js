@@ -1,26 +1,27 @@
-// Server-side RBAC enforcement. This is the authoritative security boundary — the frontend rbac.js only hides UI elements and must never be trusted on its own.
-
 /**
  * Gateway RBAC middleware
+ *
+ * Server-side enforcement of role-based access.  This is the authoritative
+ * security boundary — the frontend rbac.js only hides UI elements and must
+ * never be trusted on its own.
+ *
+ * Usage:
+ *   router.get("/analytics/dashboard", requireRole(ANALYTICS_ROLES), proxy(...))
+ *   router.post("/reviews",            requireRole(PRIVILEGED_ROLES), proxy(...))
  */
 
-import jwt from "jsonwebtoken";
-import { userHasPermission } from "../config/rbac.js";
-
-// For CommonJS Static Analysis Compatibility:
-// "use strict";
-// module.exports = { ROLES, ALL_ROLES, PRIVILEGED_ROLES, ANALYTICS_ROLES, HR_ROLES, LEADERSHIP_ROLES, SUPER_ADMIN_ROLES, requireRole, requireAuth, requireRoleForPath, requirePermission };
+"use strict";
 
 // ---------------------------------------------------------------------------
 // Role constants (keep in sync with frontend src/config/rbac.js)
 // ---------------------------------------------------------------------------
 
-export const ROLES = Object.freeze({
+const ROLES = Object.freeze({
   EMPLOYEE:    "EMPLOYEE",
   MANAGER:     "MANAGER",
   HR_ADMIN:    "HR_ADMIN",
   LEADERSHIP:  "LEADERSHIP",
-  /** @deprecated Prefer HR_ADMIN or SUPER_ADMIN for new accounts. JSDoc: Use HR_ADMIN or SUPER_ADMIN for new accounts. */
+  /** @deprecated Prefer HR_ADMIN or SUPER_ADMIN for new accounts. */
   ADMIN:       "ADMIN",
   SUPER_ADMIN: "SUPER_ADMIN",
 });
@@ -30,10 +31,10 @@ export const ROLES = Object.freeze({
 // ---------------------------------------------------------------------------
 
 /** All authenticated roles — any valid JWT. */
-export const ALL_ROLES = Object.values(ROLES);
+const ALL_ROLES = Object.values(ROLES);
 
 /** Non-employee privileged roles. */
-export const PRIVILEGED_ROLES = [
+const PRIVILEGED_ROLES = [
   ROLES.MANAGER,
   ROLES.HR_ADMIN,
   ROLES.LEADERSHIP,
@@ -42,7 +43,7 @@ export const PRIVILEGED_ROLES = [
 ];
 
 /** Analytics workspace. */
-export const ANALYTICS_ROLES = [
+const ANALYTICS_ROLES = [
   ROLES.MANAGER,
   ROLES.HR_ADMIN,
   ROLES.LEADERSHIP,
@@ -51,21 +52,21 @@ export const ANALYTICS_ROLES = [
 ];
 
 /** HR hub and calibration operations. */
-export const HR_ROLES = [
+const HR_ROLES = [
   ROLES.HR_ADMIN,
   ROLES.ADMIN,
   ROLES.SUPER_ADMIN,
 ];
 
 /** Leadership insights. */
-export const LEADERSHIP_ROLES = [
+const LEADERSHIP_ROLES = [
   ROLES.LEADERSHIP,
   ROLES.ADMIN,
   ROLES.SUPER_ADMIN,
 ];
 
 /** System administration — super admin only. */
-export const SUPER_ADMIN_ROLES = [ROLES.SUPER_ADMIN];
+const SUPER_ADMIN_ROLES = [ROLES.SUPER_ADMIN];
 
 // ---------------------------------------------------------------------------
 // Middleware factory
@@ -81,7 +82,7 @@ export const SUPER_ADMIN_ROLES = [ROLES.SUPER_ADMIN];
  * @param {string[]} allowedRoles
  * @returns {import("express").RequestHandler}
  */
-export function requireRole(allowedRoles) {
+function requireRole(allowedRoles) {
   const allowed = new Set(allowedRoles);
 
   return function rbacMiddleware(req, res, next) {
@@ -111,7 +112,7 @@ export function requireRole(allowedRoles) {
  * Convenience: allow any authenticated user (role is present and non-empty).
  * Equivalent to `requireRole(ALL_ROLES)` but skips the Set lookup.
  */
-export function requireAuth(req, res, next) {
+function requireAuth(req, res, next) {
   if (!req.user?.role) {
     return res.status(401).json({
       error: "Unauthorized",
@@ -119,29 +120,6 @@ export function requireAuth(req, res, next) {
     });
   }
   return next();
-}
-
-/**
- * Express middleware that checks the permission of the current user.
- * Kept for backward compatibility with gatewayRoutes.js and legacy config.
- * 
- * @param {string} permission 
- * @returns {import("express").RequestHandler}
- */
-export function requirePermission(permission) {
-  return (req, res, next) => {
-    // Standardize user roles/role fields for userHasPermission helper compatibility
-    if (req.user && req.user.role && (!req.user.roles || req.user.roles.length === 0)) {
-      req.user.roles = [req.user.role];
-    }
-    if (!userHasPermission(req, permission)) {
-      return res.status(403).json({
-        error: "Forbidden",
-        message: "You do not have permission to access this resource.",
-      });
-    }
-    next();
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -186,30 +164,26 @@ const PATH_ROLE_MAP = [
  * Individual route handlers can still add a tighter `requireRole(...)` call
  * for write operations (POST / PATCH / DELETE).
  */
-export function requireRoleForPath(req, res, next) {
+function requireRoleForPath(req, res, next) {
   const path = req.originalUrl.split("?")[0];
   const entry = PATH_ROLE_MAP.find((e) => path.startsWith(e.prefix));
   if (!entry) return next();                 // unmatched path — let it through
-
-  // Inline authenticateJWT if req.user is not already set
-  if (!req.user && req.headers.authorization) {
-    try {
-      const jwtSecret = process.env.JWT_SECRET || "dev-only-secret-change-me";
-      const authHeader = req.headers.authorization;
-      if (authHeader.startsWith("Bearer ")) {
-        const token = authHeader.slice(7).trim();
-        const payload = jwt.verify(token, jwtSecret, { algorithms: ["HS256"] });
-        req.user = {
-          id: payload.sub,
-          roles: payload.roles || [],
-          role: payload.roles?.[0] || "",
-          email: payload.email
-        };
-      }
-    } catch (e) {
-      // Ignore verification error; requireRole will return 401 since req.user is missing
-    }
-  }
-
   return requireRole(entry.roles)(req, res, next);
 }
+
+// ---------------------------------------------------------------------------
+// Exports
+// ---------------------------------------------------------------------------
+
+module.exports = {
+  ROLES,
+  ALL_ROLES,
+  PRIVILEGED_ROLES,
+  ANALYTICS_ROLES,
+  HR_ROLES,
+  LEADERSHIP_ROLES,
+  SUPER_ADMIN_ROLES,
+  requireRole,
+  requireAuth,
+  requireRoleForPath,
+};

@@ -1,82 +1,66 @@
+import mongoose from "mongoose";
 import { randomUUID } from "crypto";
-import { db } from "../db/database.js";
+
+const NotificationSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  user_id: { type: String, required: true },
+  title: { type: String, required: true },
+  body: { type: String, required: true },
+  read: { type: Number, default: 0 },
+  created_at: { type: String, required: true }
+}, {
+  versionKey: false,
+  _id: false
+});
+
+const Notification = mongoose.model("Notification", NotificationSchema, "notifications");
 
 export class NotificationModel {
   static async create({ userId, title, body }) {
     const id = randomUUID();
-    const notification = await db.notification.create({
-      data: {
-        id,
-        userId,
-        title,
-        body,
-        read: false
-      }
+    const now = new Date().toISOString();
+    
+    await Notification.create({
+      _id: id,
+      user_id: userId,
+      title,
+      body,
+      read: 0,
+      created_at: now
     });
-    return NotificationModel.findById(notification.id);
+    
+    return NotificationModel.findById(id);
   }
 
   static async findById(id) {
     if (!id) return null;
-    const row = await db.notification.findUnique({
-      where: { id }
-    });
-    if (!row) return null;
-    return {
-      id: row.id,
-      user_id: row.userId,
-      title: row.title,
-      body: row.body,
-      read: row.read ? 1 : 0,
-      created_at: row.createdAt.toISOString()
-    };
+    const doc = await Notification.findById(id).lean();
+    if (!doc) return null;
+    return { ...doc, id: doc._id };
   }
 
   static async listForUser(userId, { limit = 50 } = {}) {
     if (!userId) return [];
-    const list = await db.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: limit
-    });
-    return list.map((row) => ({
-      id: row.id,
-      user_id: row.userId,
-      title: row.title,
-      body: row.body,
-      read: row.read ? 1 : 0,
-      created_at: row.createdAt.toISOString()
-    }));
+    const docs = await Notification.find({ user_id: userId }).sort({ created_at: -1 }).limit(limit).lean();
+    return docs.map(d => ({ ...d, id: d._id }));
   }
 
   static async markRead(id, userId) {
-    if (!id || !userId) return false;
-    const res = await db.notification.updateMany({
-      where: { id, userId },
-      data: { read: true }
-    });
-    return res.count > 0;
+    const res = await Notification.updateOne({ _id: id, user_id: userId }, { $set: { read: 1 } });
+    return res.modifiedCount > 0;
   }
 
   static async markAllRead(userId) {
-    if (!userId) return;
-    await db.notification.updateMany({
-      where: { userId, read: false },
-      data: { read: true }
-    });
+    await Notification.updateMany({ user_id: userId }, { $set: { read: 1 } });
   }
 
-  /** Marks unread rows whose title matches feedback-service notification titles. */
   static async markReadByTitles(userId, titles) {
-    if (!userId || !titles?.length) return 0;
-    const res = await db.notification.updateMany({
-      where: {
-        userId,
-        read: false,
-        title: { in: titles }
-      },
-      data: { read: true }
-    });
-    return res.count;
+    if (!titles?.length) return 0;
+    const res = await Notification.updateMany({
+      user_id: userId,
+      read: 0,
+      title: { $in: titles }
+    }, { $set: { read: 1 } });
+    return res.modifiedCount;
   }
 }

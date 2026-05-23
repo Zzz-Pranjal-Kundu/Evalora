@@ -1,7 +1,9 @@
-// These checks are UI-only. The API gateway must enforce the same role rules independently on every backend endpoint.
-
 /**
  * Client-side mirrors of gateway RBAC for navigation and route guards.
+ *
+ * IMPORTANT: These checks are UI-only (hide nav items, redirect unauthorised
+ * routes).  The API gateway MUST enforce the same role rules independently on
+ * every backend endpoint — never rely solely on this file for security.
  *
  * Role hierarchy (most → least privileged):
  *   SUPER_ADMIN > ADMIN (legacy, prefer HR_ADMIN / SUPER_ADMIN) > HR_ADMIN
@@ -16,7 +18,7 @@ export const ROLES = {
   MANAGER:     "MANAGER",
   HR_ADMIN:    "HR_ADMIN",
   LEADERSHIP:  "LEADERSHIP",
-  /** @deprecated Use HR_ADMIN or SUPER_ADMIN for new accounts. JSDoc: new accounts should use HR_ADMIN or SUPER_ADMIN instead. */
+  /** @deprecated Use HR_ADMIN or SUPER_ADMIN for new accounts. */
   ADMIN:       "ADMIN",
   SUPER_ADMIN: "SUPER_ADMIN",
 };
@@ -58,6 +60,14 @@ const leadershipRoles = new Set([
 
 /**
  * Organization directory & charts.
+ *
+ * ALL authenticated roles may open /org.  However, the OrganizationPage
+ * component applies a second layer of defence:
+ *   - Privileged roles  → GET /users/profiles  (full roster)
+ *   - EMPLOYEE / others → GET /users/profiles/me + GET /users/directory
+ *                         (own profile + public directory only)
+ * This means employees never receive data they are not entitled to, even
+ * though the route itself is unrestricted.
  */
 const orgRoles = new Set([
   ROLES.EMPLOYEE,
@@ -95,9 +105,9 @@ export function canSeeLeadership(role) {
 }
 
 /**
- * @description All roles can access /org but OrganizationPage enforces a second layer:
- * privileged roles call GET /users/profiles (full roster) while EMPLOYEE falls
- * back to GET /users/profiles/me + GET /users/directory.
+ * Org directory & charts route.
+ * All roles are permitted; data scoping is enforced inside OrganizationPage
+ * (see comment on orgRoles above).
  */
 export function canSeeOrgWorkspace(role) {
   return Boolean(role && orgRoles.has(role));

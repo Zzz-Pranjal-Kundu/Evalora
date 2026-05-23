@@ -1,5 +1,4 @@
 import { NotificationModel } from "../models/NotificationModel.js";
-import { db } from "../db/database.js";
 import { logger } from "../utils/logger.js";
 import { loadOrgSeed } from "./loadOrgJson.js";
 
@@ -29,10 +28,8 @@ export async function seedDemoNotifications() {
   for (const email of emails) {
     const userId = emailToId.get(email);
     if (!userId) continue;
-    const c = await db.notification.count({
-      where: { userId }
-    });
-    if (c > 0) continue;
+    const list = await NotificationModel.listForUser(userId);
+    if (list.length > 0) continue;
     for (const it of TEMPLATES) {
       await NotificationModel.create({ userId, title: it.title, body: it.body });
     }

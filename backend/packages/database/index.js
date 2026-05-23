@@ -239,14 +239,14 @@ async function applyIncludes(docs, modelName, include, db) {
     for (const doc of docList) {
       let query = {};
       if (rel.localField) {
-        const val = doc[rel.localField];
+        const val = doc[rel.localField] !== undefined ? doc[rel.localField] : doc[fromDbKey(rel.localField)];
         if (val === undefined || val === null) {
           doc[key] = rel.isArray ? [] : null;
           continue;
         }
         query['_id'] = val;
       } else {
-        query[rel.foreignKey] = doc._id;
+        query[toDbKey(rel.foreignKey)] = doc.id || doc._id;
       }
 
       let relDocs;

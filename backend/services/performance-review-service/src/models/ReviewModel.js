@@ -1,80 +1,56 @@
+import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
-import { db } from "../db/database.js";
 
-async function mapReview(r) {
-  if (!r) return null;
-  const employee = await db.employee.findUnique({
-    where: { id: r.employeeId }
-  });
-  const reviewer = await db.employee.findUnique({
-    where: { id: r.reviewerId }
-  });
-  return {
-    id: r.id,
-    cycle_id: r.cycleId,
-    employee_id: employee?.userId || r.employeeId,
-    reviewer_id: reviewer?.userId || r.reviewerId,
-    status: r.status,
-    rating: r.rating,
-    summary: r.summary,
-    visibility: r.visibility,
-    created_at: r.createdAt.toISOString(),
-    updated_at: r.updatedAt.toISOString()
-  };
-}
+const ReviewSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  cycle_id: { type: String, required: true },
+  employee_id: { type: String, required: true },
+  reviewer_id: { type: String, required: true },
+  status: { type: String, required: true },
+  rating: { type: Number, default: 0 },
+  summary: { type: String, default: "" },
+  visibility: { type: String, default: "participants_only" },
+  created_at: { type: String, required: true },
+  updated_at: { type: String, required: true }
+}, {
+  versionKey: false,
+  _id: false
+});
+
+const Review = mongoose.model("Review", ReviewSchema, "reviews");
 
 export async function findAll() {
-  const list = await db.review.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  return Promise.all(list.map(mapReview));
+  const docs = await Review.find({}).sort({ created_at: -1 }).lean();
+  return docs.map(d => ({ ...d, id: d._id }));
 }
 
 export async function findForReviewerOrEmployee(userId) {
   if (!userId) return [];
-  const emp = await db.employee.findUnique({ where: { userId } });
-  if (!emp) return [];
-
-  const list = await db.review.findMany({
-    where: {
-      OR: [
-        { reviewerId: emp.id },
-        { employeeId: emp.id }
-      ]
-    },
-    orderBy: { createdAt: 'desc' }
-  });
-  return Promise.all(list.map(mapReview));
+  const docs = await Review.find({
+    $or: [
+      { reviewer_id: userId },
+      { employee_id: userId }
+    ]
+  }).sort({ created_at: -1 }).lean();
+  return docs.map(d => ({ ...d, id: d._id }));
 }
 
 export async function findForEmployee(userId) {
   if (!userId) return [];
-  const emp = await db.employee.findUnique({ where: { userId } });
-  if (!emp) return [];
-
-  const list = await db.review.findMany({
-    where: { employeeId: emp.id },
-    orderBy: { createdAt: 'desc' }
-  });
-  return Promise.all(list.map(mapReview));
+  const docs = await Review.find({ employee_id: userId }).sort({ created_at: -1 }).lean();
+  return docs.map(d => ({ ...d, id: d._id }));
 }
 
 export async function findById(reviewId) {
   if (!reviewId) return null;
-  const r = await db.review.findUnique({
-    where: { id: reviewId }
-  });
-  return mapReview(r);
+  const doc = await Review.findById(reviewId).lean();
+  if (!doc) return null;
+  return { ...doc, id: doc._id };
 }
 
-export async function hasAnyForEmployee(userId) {
-  if (!userId) return false;
-  const emp = await db.employee.findUnique({ where: { userId } });
-  if (!emp) return false;
-
-  const count = await db.review.count({
-    where: { employeeId: emp.id }
-  });
+export async function hasAnyForEmployee(employeeId) {
+  if (!employeeId) return false;
+  const count = await Review.countDocuments({ employee_id: employeeId });
   return count > 0;
 }
 
@@ -87,44 +63,37 @@ export async function insert({
   summary,
   visibility = "participants_only",
 }) {
+  const now = new Date().toISOString();
   const id = randomUUID();
-  const emp = await db.employee.findUnique({ where: { userId: employee_id } });
-  const rev = await db.employee.findUnique({ where: { userId: reviewer_id } });
-  if (!emp || !rev) {
-    throw new Error("Employee or reviewer profile not found");
-  }
-
-  const r = await db.review.create({
-    data: {
-      id,
-      cycleId: cycle_id,
-      employeeId: emp.id,
-      reviewerId: rev.id,
-      status,
-      rating: rating !== undefined ? parseFloat(rating) : null,
-      summary,
-      visibility
-    }
+  await Review.create({
+    _id: id,
+    cycle_id,
+    employee_id,
+    reviewer_id,
+    status,
+    rating,
+    summary,
+    visibility,
+    created_at: now,
+    updated_at: now
   });
-  return findById(r.id);
+  return findById(id);
 }
 
 export async function updateFields(reviewId, { status, rating, summary, visibility, updated_at }) {
-  const prev = await db.review.findUnique({ where: { id: reviewId } });
+  const prev = await findById(reviewId);
   if (!prev) return null;
+  
   const vis = visibility !== undefined ? visibility : prev.visibility || "participants_only";
-
-  const updateData = {
-    status: status !== undefined ? status : prev.status,
-    rating: rating !== undefined ? parseFloat(rating) : prev.rating,
-    summary: summary !== undefined ? summary : prev.summary,
-    visibility: vis,
-    updatedAt: updated_at ? new Date(updated_at) : new Date()
-  };
-
-  await db.review.update({
-    where: { id: reviewId },
-    data: updateData
-  });
+  const upDate = updated_at || new Date().toISOString();
+  
+  const updates = {};
+  if (status !== undefined) updates.status = status;
+  if (rating !== undefined) updates.rating = rating;
+  if (summary !== undefined) updates.summary = summary;
+  if (vis !== undefined) updates.visibility = vis;
+  updates.updated_at = upDate;
+  
+  await Review.findByIdAndUpdate(reviewId, { $set: updates });
   return findById(reviewId);
 }

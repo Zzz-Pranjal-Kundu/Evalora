@@ -1,6 +1,11 @@
-import { prisma } from "@epfms/database";
+import mongoose from "mongoose";
+import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
-export const db = prisma;
+const uri = env.mongodbUri;
 
-logger.info("Analytics database initialized", { driver: "prisma:postgresql" });
+mongoose.connect(uri)
+  .then(() => logger.info("Analytics database connected successfully via Mongoose"))
+  .catch(err => logger.error("Analytics database connection failed", err));
+
+export const db = mongoose.connection;

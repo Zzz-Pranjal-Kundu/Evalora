@@ -1,9 +1,9 @@
 import * as AnalyticsService from "../services/analyticsService.js";
-import { db } from "../db/database.js";
+import { countAll } from "../models/EventModel.js";
 import { logger } from "../utils/logger.js";
 
 export async function seedDemoEvents() {
-  const n = await db.event.count();
+  const n = await countAll();
   if (n > 0) return;
   const samples = [
     ["GOAL_CREATED", { owner: "demo", titleHint: "migration" }],

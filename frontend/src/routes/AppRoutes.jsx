@@ -25,6 +25,7 @@ import RecognitionPage from "../pages/RecognitionPage.jsx";
 import CompetenciesPage from "../pages/CompetenciesPage.jsx";
 import ModulePlaceholder from "../pages/ModulePlaceholder.jsx";
 import OrganizationPage from "../pages/OrganizationPage.jsx";
+import HRHubPage from "../pages/HRHubPage.jsx";
 import { ROUTES } from "./paths.js";
 
 /**
@@ -88,10 +89,7 @@ export function AppRoutes() {
           path={ROUTES.HR}
           element={
             <RoleRoute roles={HR_HUB_ROLE_LIST}>
-              <ModulePlaceholder
-                title="HR hub"
-                description="Launch review cycles, manage templates, run calibration campaigns, and configure who can access 360 workflows and automated reminders. Wire this to your HRIS for org-wide rollout and adoption reporting."
-              />
+              <HRHubPage />
             </RoleRoute>
           }
         />
